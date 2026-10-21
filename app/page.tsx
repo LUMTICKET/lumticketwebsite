@@ -391,7 +391,7 @@ export default function HomePage() {
             </ul>
 
             <div className="lum-business-actions">
-              <a href="#partner-signup" className="lum-button-gold-lg">
+              <a href="https://business.lumticket.com/signup" className="lum-button-gold-lg">
                 <Building2 size={20} />
                 <span>Get Started with Your Ticketing Business</span>
               </a>

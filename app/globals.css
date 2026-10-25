@@ -1663,3 +1663,232 @@ input {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- Marketplace (live tickets) ---------- */
+.lum-mkt-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 23px;
+}
+.lum-mkt-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  border: 1px solid var(--lum-border);
+  border-radius: 9px;
+  background: white;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+.lum-mkt-card:not(.lum-skeleton):hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 34px rgba(4, 32, 69, 0.09);
+}
+.lum-mkt-visual {
+  position: relative;
+  display: grid;
+  height: 118px;
+  place-items: center;
+  color: rgba(255, 253, 247, 0.9);
+  background: radial-gradient(ellipse at 80% 10%, rgba(35, 76, 122, 0.7), transparent 55%), var(--lum-navy);
+}
+.lum-mkt-visual.is-event {
+  background: radial-gradient(ellipse at 20% 0%, rgba(204, 159, 47, 0.45), transparent 55%), #0b2a57;
+}
+.lum-mkt-visual.is-travel {
+  background: radial-gradient(ellipse at 80% 100%, rgba(204, 159, 47, 0.35), transparent 55%), #123a68;
+}
+.lum-status {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 9px;
+  border-radius: 20px;
+  color: var(--lum-navy);
+  background: var(--lum-cream);
+  font-size: 10px;
+  font-weight: 700;
+}
+.lum-status.is-selling-fast { background: var(--lum-gold); }
+.lum-status.is-sold-out { color: white; background: #8a2c2c; }
+.lum-mkt-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 18px 18px 16px;
+}
+.lum-mkt-body h3 {
+  margin: 8px 0 4px;
+  font-size: 19px;
+  line-height: 1.25;
+  letter-spacing: -0.035em;
+}
+.lum-mkt-sub {
+  margin: 0;
+  color: var(--lum-muted);
+  font-size: 12px;
+}
+.lum-mkt-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 14px 0 18px;
+  padding: 0;
+  list-style: none;
+  color: #5d6a7d;
+  font-size: 11px;
+}
+.lum-mkt-meta li { display: inline-flex; align-items: center; gap: 5px; }
+.lum-mkt-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--lum-border);
+}
+.lum-mkt-price { display: flex; flex-direction: column; font-size: 16px; font-weight: 750; letter-spacing: -0.02em; }
+.lum-mkt-price small { color: var(--lum-muted); font-size: 10px; font-weight: 500; letter-spacing: 0; }
+.lum-button-primary-card {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  color: white;
+  background: var(--lum-navy);
+  cursor: pointer;
+}
+.lum-button-primary-card:hover:not(:disabled) { background: #0b3769; transform: translateY(-2px); }
+.lum-button-primary-card:disabled { opacity: 0.45; cursor: not-allowed; }
+.lum-skeleton {
+  min-height: 300px;
+  border-color: transparent;
+  background: linear-gradient(100deg, #ebe9df 30%, #f6f5ee 50%, #ebe9df 70%) 0 0 / 200% 100%;
+  animation: lum-shimmer 1.4s linear infinite;
+}
+@keyframes lum-shimmer { to { background-position: -200% 0; } }
+.lum-retry { margin: 14px auto 0; cursor: pointer; }
+
+/* ---------- Checkout modal ---------- */
+.lum-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  overflow-y: auto;
+  background: rgba(4, 32, 69, 0.55);
+  backdrop-filter: blur(3px);
+}
+.lum-modal {
+  position: relative;
+  width: min(480px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 26px;
+  border-radius: 12px;
+  color: var(--lum-navy);
+  background: var(--lum-cream);
+  box-shadow: 0 30px 80px rgba(4, 32, 69, 0.35);
+  outline: none;
+}
+.lum-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid var(--lum-border);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+.lum-modal-head { padding-right: 38px; margin-bottom: 18px; }
+.lum-modal-head h3 { margin: 8px 0 4px; font-size: 22px; line-height: 1.2; letter-spacing: -0.04em; }
+.lum-modal-head p { margin: 0; color: var(--lum-muted); font-size: 12px; }
+.lum-form { display: flex; flex-direction: column; gap: 14px; }
+.lum-mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border-radius: 8px;
+  background: rgba(4, 32, 69, 0.06);
+}
+.lum-mode-tabs button {
+  padding: 9px 6px;
+  border: 0;
+  border-radius: 6px;
+  color: #5d6a7d;
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+.lum-mode-tabs button.active { color: var(--lum-navy); background: white; box-shadow: 0 1px 4px rgba(4, 32, 69, 0.12); }
+.lum-qty-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.lum-qty-row strong { display: block; font-size: 13px; }
+.lum-qty-row small { color: var(--lum-muted); font-size: 11px; }
+.lum-stepper { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--lum-border); border-radius: 8px; background: white; }
+.lum-stepper button { display: grid; width: 38px; height: 38px; place-items: center; border: 0; background: transparent; cursor: pointer; }
+.lum-stepper button:disabled { opacity: 0.3; cursor: not-allowed; }
+.lum-stepper span { min-width: 22px; text-align: center; font-size: 14px; font-weight: 700; }
+.lum-field { display: flex; flex: 1; flex-direction: column; gap: 6px; min-width: 0; }
+.lum-field > span { font-size: 11px; font-weight: 650; }
+.lum-field em { color: var(--lum-muted); font-style: normal; font-weight: 400; }
+.lum-field input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--lum-border);
+  border-radius: 7px;
+  color: var(--lum-navy);
+  background: white;
+  font-size: 14px; /* 16px-ish keeps iOS from zooming; 14 is fine on desktop */
+}
+.lum-field input:focus { border-color: var(--lum-navy); outline: 2px solid rgba(204, 159, 47, 0.45); outline-offset: 0; }
+.lum-field-row { display: flex; gap: 10px; }
+.lum-submit { width: 100%; min-height: 48px; border: 0; cursor: pointer; }
+.lum-submit:disabled { opacity: 0.6; cursor: wait; }
+.lum-form-error, .lum-form-notice { margin: 0; padding: 10px 12px; border-radius: 7px; font-size: 12px; line-height: 1.5; }
+.lum-form-error { color: #7a1f1f; background: #fbe9e7; }
+.lum-form-notice { color: #1d5a35; background: #e6f4ea; }
+.lum-form-hint { display: flex; align-items: center; gap: 8px; margin: 0; color: #5d6a7d; font-size: 12px; }
+.lum-form-fineprint { margin: 0; color: var(--lum-muted); font-size: 11px; text-align: center; }
+.lum-link-button { align-self: center; border: 0; color: var(--lum-navy); background: none; cursor: pointer; font-size: 12px; text-decoration: underline; }
+.lum-spin { animation: lum-rot 0.8s linear infinite; }
+@keyframes lum-rot { to { transform: rotate(360deg); } }
+.lum-success { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.lum-success-icon { display: grid; width: 64px; height: 64px; place-items: center; border-radius: 50%; color: #1d7a45; background: #e6f4ea; }
+.lum-success h3 { margin: 16px 0 6px; font-size: 24px; letter-spacing: -0.04em; }
+.lum-success-lead { margin: 0 0 20px; color: #5d6a7d; font-size: 13px; line-height: 1.6; }
+.lum-ticket-stub {
+  width: 100%;
+  padding: 18px;
+  border: 1px dashed rgba(4, 32, 69, 0.3);
+  border-radius: 10px;
+  background: white;
+  text-align: left;
+}
+.lum-ticket-stub small { color: var(--lum-muted); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+.lum-ticket-stub > strong { display: block; margin: 4px 0 14px; font-size: 22px; letter-spacing: 0.04em; color: #96751f; word-break: break-all; }
+.lum-ticket-stub dl { display: grid; gap: 8px; margin: 0; font-size: 12px; }
+.lum-ticket-stub dl div { display: flex; justify-content: space-between; gap: 16px; }
+.lum-ticket-stub dt { color: var(--lum-muted); }
+.lum-ticket-stub dd { margin: 0; font-weight: 650; text-align: right; }
+.lum-modal-actions { display: flex; gap: 10px; width: 100%; margin-top: 18px; }
+.lum-modal-actions > * { flex: 1; cursor: pointer; }
+
+@media (max-width: 1000px) {
+  .lum-mkt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .lum-mkt-grid { grid-template-columns: 1fr; }
+  .lum-field-row { flex-direction: column; }
+  .lum-modal { padding: 22px 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lum-skeleton, .lum-spin { animation: none; }
+}

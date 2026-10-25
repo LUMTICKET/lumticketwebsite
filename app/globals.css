@@ -1892,3 +1892,113 @@ input {
 @media (prefers-reduced-motion: reduce) {
   .lum-skeleton, .lum-spin { animation: none; }
 }
+
+/* Bus route search panel — append to your global stylesheet */
+
+.lum-bus-search {
+  background: #fff;
+  border-radius: 28px;
+  padding: 16px 20px 20px;
+  margin-bottom: 24px;
+  display: grid;
+  gap: 14px;
+}
+
+.lum-trip-toggle {
+  display: flex;
+  gap: 8px;
+}
+.lum-trip-toggle button {
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: #f4f2ec;
+  color: #2b3a4a;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.lum-trip-toggle button.active {
+  background: #0b2447;
+  color: #fff;
+}
+.lum-trip-toggle button:focus-visible,
+.lum-button-gold:focus-visible {
+  outline: 2px solid #cfa032;
+  outline-offset: 2px;
+}
+
+.lum-bus-search-fields {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.lum-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 50px;
+  padding: 0 14px;
+  border: 1px solid #e6e1d3;
+  border-radius: 14px;
+  color: #8a94a3;
+  background: #fff;
+}
+.lum-field:focus-within {
+  border-color: #cfa032;
+}
+.lum-field input,
+.lum-field select {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  color: #0b2447;
+}
+.lum-field input::placeholder {
+  color: #8a94a3;
+}
+
+.lum-bus-search-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lum-button-gold {
+  height: 52px;
+  padding: 0 40px;
+  border: 0;
+  border-radius: 999px;
+  background: #cfa032;
+  color: #0b2447;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.lum-button-gold:hover {
+  filter: brightness(1.06);
+}
+
+.lum-search-summary {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: inherit;
+  opacity: 0.85;
+}
+
+@media (max-width: 560px) {
+  .lum-bus-search {
+    padding: 14px;
+    border-radius: 22px;
+  }
+  .lum-button-gold {
+    width: 100%;
+  }
+  .lum-bus-search-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

@@ -140,6 +140,7 @@ export default function Marketplace() {
               value={form.from}
               onChange={(e) => setForm({ ...form, from: e.target.value })}
               aria-label="Leaving from"
+              autoComplete="off"
             />
           </label>
 
@@ -150,6 +151,7 @@ export default function Marketplace() {
               value={form.to}
               onChange={(e) => setForm({ ...form, to: e.target.value })}
               aria-label="Going to"
+              autoComplete="off"
             />
           </label>
 

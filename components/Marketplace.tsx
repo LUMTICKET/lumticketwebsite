@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ArrowLeftRight,
   ArrowRight,
   Bus,
   CalendarDays,
@@ -10,6 +11,7 @@ import {
   RefreshCw,
   Search,
   Users,
+  X,
 } from "lucide-react";
 import { fetchEvents, fetchRoutes, formatMoney, type Listing } from "@/lib/api";
 import CheckoutModal from "@/components/CheckoutModal";
@@ -21,6 +23,12 @@ const STATUS_LABEL: Record<string, string> = {
   "on-sale": "On sale",
   "selling-fast": "Selling fast",
   "sold-out": "Sold out",
+};
+
+const STATUS_STYLES: Record<string, string> = {
+  "on-sale": "bg-emerald-50 text-emerald-700 border-emerald-200",
+  "selling-fast": "bg-amber-50 text-amber-700 border-amber-200",
+  "sold-out": "bg-rose-50 text-rose-700 border-rose-200",
 };
 
 type TripType = "one-way" | "return";
@@ -36,9 +44,9 @@ type SearchForm = {
 const EMPTY_FORM: SearchForm = { from: "", to: "", date: "", returnDate: "", passengers: 1 };
 
 function GroupIcon({ group }: { group: Listing["group"] }) {
-  if (group === "Buses") return <Bus size={30} strokeWidth={1.5} />;
-  if (group === "Events") return <CalendarDays size={30} strokeWidth={1.5} />;
-  return <Compass size={30} strokeWidth={1.5} />;
+  if (group === "Buses") return <Bus className="w-6 h-6 text-blue-600" />;
+  if (group === "Events") return <CalendarDays className="w-6 h-6 text-purple-600" />;
+  return <Compass className="w-6 h-6 text-emerald-600" />;
 }
 
 export default function Marketplace() {
@@ -49,7 +57,7 @@ export default function Marketplace() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Listing | null>(null);
 
-  // Route search (Leaving from / Going to / date / passengers)
+  // Route search states
   const [trip, setTrip] = useState<TripType>("one-way");
   const [form, setForm] = useState<SearchForm>(EMPTY_FORM);
   const [applied, setApplied] = useState<SearchForm | null>(null);
@@ -73,7 +81,7 @@ export default function Marketplace() {
 
   const runSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setTab("Buses"); // a route search only makes sense for buses
+    setTab("Buses"); // Route search defaults to Buses
     setSearch("");
     setApplied({ ...form, returnDate: trip === "return" ? form.returnDate : "" });
   };
@@ -82,6 +90,10 @@ export default function Marketplace() {
     setApplied(null);
     setForm(EMPTY_FORM);
     setTrip("one-way");
+  };
+
+  const swapLocations = () => {
+    setForm((prev) => ({ ...prev, from: prev.to, to: prev.from }));
   };
 
   const filtered = useMemo(() => {
@@ -93,8 +105,6 @@ export default function Marketplace() {
       if (tab !== "All" && i.group !== tab) return false;
 
       if (applied) {
-        // If your route listings have dedicated origin/destination fields,
-        // match against those here instead of the combined text.
         const haystack = [i.title, i.subtitle, i.place, ...i.meta]
           .filter(Boolean)
           .join(" ")
@@ -114,214 +124,306 @@ export default function Marketplace() {
   }, [items, tab, search, applied]);
 
   return (
-    <>
-      {/* ───────── Bus route search ───────── */}
-      <form className="lum-bus-search" onSubmit={runSearch}>
-        <div className="lum-trip-toggle" role="radiogroup" aria-label="Trip type">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 font-sans">
+      {/* ───────── Main Bus & Route Search Box ───────── */}
+      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5">
+        {/* Trip Type Selector */}
+        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg w-fit">
           {(["one-way", "return"] as const).map((t) => (
             <button
               key={t}
               type="button"
-              role="radio"
-              aria-checked={trip === t}
-              className={trip === t ? "active" : ""}
               onClick={() => setTrip(t)}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                trip === t
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
             >
               {t === "one-way" ? "One way" : "Return"}
             </button>
           ))}
         </div>
 
-        <div className="lum-bus-search-fields">
-          <label className="lum-field">
-            <MapPin size={16} />
-            <input
-              placeholder="Leaving from"
-              value={form.from}
-              onChange={(e) => setForm({ ...form, from: e.target.value })}
-              aria-label="Leaving from"
-            />
-          </label>
+        {/* Input Fields Form */}
+        <form onSubmit={runSearch} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+            {/* Leaving From */}
+            <div className="md:col-span-3 relative">
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                From
+              </label>
+              <div className="relative">
+                <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Leaving from..."
+                  value={form.from}
+                  onChange={(e) => setForm({ ...form, from: e.target.value })}
+                  className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all placeholder:text-slate-400 text-slate-800"
+                />
+              </div>
+            </div>
 
-          <label className="lum-field">
-            <Bus size={16} />
-            <input
-              placeholder="Going to"
-              value={form.to}
-              onChange={(e) => setForm({ ...form, to: e.target.value })}
-              aria-label="Going to"
-            />
-          </label>
+            {/* Swap Button (Desktop) */}
+            <div className="hidden md:flex md:col-span-1 justify-center pt-5">
+              <button
+                type="button"
+                onClick={swapLocations}
+                title="Swap departure and arrival"
+                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors border border-slate-200"
+              >
+                <ArrowLeftRight className="w-4 h-4" />
+              </button>
+            </div>
 
-          <label className="lum-field">
-            <CalendarDays size={16} />
-            <input
-              type="date"
-              value={form.date}
-              onChange={(e) => setForm({ ...form, date: e.target.value })}
-              aria-label="Departure date"
-            />
-          </label>
+            {/* Going To */}
+            <div className="md:col-span-3 relative">
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                To
+              </label>
+              <div className="relative">
+                <Bus className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Going to..."
+                  value={form.to}
+                  onChange={(e) => setForm({ ...form, to: e.target.value })}
+                  className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all placeholder:text-slate-400 text-slate-800"
+                />
+              </div>
+            </div>
 
-          {trip === "return" && (
-            <label className="lum-field">
-              <CalendarDays size={16} />
-              <input
-                type="date"
-                min={form.date || undefined}
-                value={form.returnDate}
-                onChange={(e) => setForm({ ...form, returnDate: e.target.value })}
-                aria-label="Return date"
-              />
-            </label>
-          )}
+            {/* Departure Date */}
+            <div className={trip === "return" ? "md:col-span-2 relative" : "md:col-span-3 relative"}>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                Depart
+              </label>
+              <div className="relative">
+                <CalendarDays className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                  className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-slate-800"
+                />
+              </div>
+            </div>
 
-          <label className="lum-field">
-            <Users size={16} />
-            <select
-              value={form.passengers}
-              onChange={(e) => setForm({ ...form, passengers: Number(e.target.value) })}
-              aria-label="Passengers"
+            {/* Return Date (Conditional) */}
+            {trip === "return" && (
+              <div className="md:col-span-2 relative">
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                  Return
+                </label>
+                <div className="relative">
+                  <CalendarDays className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="date"
+                    min={form.date || undefined}
+                    value={form.returnDate}
+                    onChange={(e) => setForm({ ...form, returnDate: e.target.value })}
+                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-slate-800"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Passengers */}
+            <div className="md:col-span-1 relative">
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                Pass.
+              </label>
+              <div className="relative">
+                <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <select
+                  value={form.passengers}
+                  onChange={(e) => setForm({ ...form, passengers: Number(e.target.value) })}
+                  className="w-full pl-9 pr-2 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-slate-800 appearance-none"
+                >
+                  {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-end gap-3 pt-2">
+            {applied && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+              >
+                <X className="w-4 h-4" /> Clear search
+              </button>
+            )}
+            <button
+              type="submit"
+              className="px-6 py-2.5 text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-500 rounded-xl shadow-sm transition-all flex items-center gap-2"
             >
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={n}>
-                  {n} passenger{n > 1 ? "s" : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <div className="lum-bus-search-actions">
-          <button type="submit" className="lum-button-gold">
-            Search
-          </button>
-          {applied && (
-            <button type="button" className="lum-button-outline-sm" onClick={clearSearch}>
-              Clear
+              <Search className="w-4 h-4" /> Search tickets
             </button>
-          )}
-        </div>
-      </form>
+          </div>
+        </form>
+      </div>
 
-      {/* ───────── Tabs + keyword search ───────── */}
-      <div className="lum-discovery-tools">
-        <div className="lum-category-tabs" role="tablist">
+      {/* ───────── Tabs & Keyword Search Bar ───────── */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        {/* Category Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           {TABS.map((t) => (
             <button
               key={t}
-              role="tab"
-              className={tab === t ? "active" : ""}
-              aria-selected={tab === t}
               onClick={() => setTab(t)}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                tab === t
+                  ? "bg-slate-900 text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+              }`}
             >
               {t}
             </button>
           ))}
         </div>
 
-        <label className="lum-experience-search">
-          <Search size={17} />
+        {/* Global Keyword Filter */}
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
+            type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search routes, events, cities…"
-            aria-label="Search tickets"
+            placeholder="Search routes, events, cities..."
+            className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all placeholder:text-slate-400 text-slate-800"
           />
-        </label>
+        </div>
       </div>
 
+      {/* Applied Filter Summary */}
       {applied && (applied.from || applied.to || applied.date) && (
-        <p className="lum-search-summary" role="status">
-          Showing {filtered.length} result{filtered.length === 1 ? "" : "s"}
-          {applied.from && <> from <strong>{applied.from}</strong></>}
-          {applied.to && <> to <strong>{applied.to}</strong></>}
-          {applied.date && <> on <strong>{applied.date}</strong></>}
-        </p>
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-2.5 rounded-xl text-sm flex items-center justify-between">
+          <p>
+            Showing <strong>{filtered.length}</strong> result{filtered.length === 1 ? "" : "s"}
+            {applied.from && <> from <strong>{applied.from}</strong></>}
+            {applied.to && <> to <strong>{applied.to}</strong></>}
+            {applied.date && <> on <strong>{applied.date}</strong></>}
+          </p>
+          <button
+            onClick={clearSearch}
+            className="text-xs font-semibold text-amber-900 underline hover:text-amber-700"
+          >
+            Reset
+          </button>
+        </div>
       )}
 
-      {/* ───────── Results ───────── */}
+      {/* ───────── Results Grid ───────── */}
       {loading ? (
-        <div className="lum-mkt-grid" aria-busy="true">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }, (_, i) => (
-            <div className="lum-mkt-card lum-skeleton" key={i} />
+            <div
+              key={i}
+              className="h-64 bg-slate-100 animate-pulse rounded-2xl border border-slate-200"
+            />
           ))}
         </div>
       ) : failed ? (
-        <div className="lum-empty-state" role="alert">
-          <p>We couldn&apos;t load tickets right now.</p>
-          <button className="lum-button-outline-sm lum-retry" onClick={load}>
-            <RefreshCw size={15} />
-            <span>Try again</span>
+        <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 space-y-4">
+          <p className="text-slate-600">We couldn&apos;t load tickets right now.</p>
+          <button
+            onClick={load}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" /> Try again
           </button>
         </div>
       ) : filtered.length === 0 ? (
-        <p className="lum-empty-state" role="status">
-          {items.length === 0
-            ? "No tickets are on sale yet. Check back soon."
-            : applied
-              ? "No buses match that route or date. Try different cities or clear the search."
+        <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
+          <p className="text-slate-500">
+            {items.length === 0
+              ? "No tickets are on sale yet. Check back soon."
+              : applied
+              ? "No tickets match that route or date. Try different cities or clear the search."
               : "Nothing matches your search. Try another keyword or category."}
-        </p>
+          </p>
+        </div>
       ) : (
-        <div className="lum-mkt-grid">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((item) => {
             const soldOut = item.status === "sold-out";
             return (
-              <article className="lum-mkt-card" key={item.key}>
-                <div
-                  className={`lum-mkt-visual is-${
-                    item.group === "Buses" ? "bus" : item.group === "Events" ? "event" : "travel"
-                  }`}
-                >
-                  <GroupIcon group={item.group} />
-                  <span className={`lum-status is-${item.status}`}>
+              <article
+                key={item.key}
+                className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden"
+              >
+                {/* Visual Header */}
+                <div className="p-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                  <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-100">
+                    <GroupIcon group={item.group} />
+                  </div>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                      STATUS_STYLES[item.status] ?? "bg-slate-100 text-slate-700 border-slate-200"
+                    }`}
+                  >
                     {STATUS_LABEL[item.status] ?? item.status}
                   </span>
                 </div>
-                <div className="lum-mkt-body">
-                  <span className="lum-card-category">{item.group}</span>
-                  <h3>{item.title}</h3>
-                  {item.subtitle && <p className="lum-mkt-sub">{item.subtitle}</p>}
-                  <ul className="lum-mkt-meta">
-                    {item.place && (
-                      <li>
-                        <MapPin size={13} />
-                        {item.place}
-                      </li>
-                    )}
-                    {item.startsAt && (
-                      <li>
-                        <CalendarDays size={13} />
-                        {new Date(item.startsAt).toLocaleDateString("en-GB", { dateStyle: "medium" })}
-                      </li>
-                    )}
-                    {item.meta.map((m) => (
-                      <li key={m}>{m}</li>
-                    ))}
-                  </ul>
-                  <div className="lum-mkt-foot">
-                    <span className="lum-mkt-price">
-                      <small>From</small>
-                      {formatMoney(item.fromPrice, item.currency)}
-                    </span>
-                    <button
-                      className="lum-button-primary-card"
-                      disabled={soldOut}
-                      onClick={() => setSelected(item)}
-                    >
-                      <span>{soldOut ? "Sold out" : "Buy ticket"}</span>
-                      {!soldOut && <ArrowRight size={16} />}
-                    </button>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      )}
 
-      {selected && <CheckoutModal item={selected} onClose={() => setSelected(null)} />}
-    </>
-  );
-}
+                {/* Body Content */}
+                <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
+                  <div>
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      {item.group}
+                    </span>
+                    <h3 className="text-lg font-bold text-slate-900 mt-1 leading-snug">
+                      {item.title}
+                    </h3>
+                    {item.subtitle && (
+                      <p className="text-sm text-slate-500 mt-1">{item.subtitle}</p>
+                    )}
+
+                    {/* Metadata list */}
+                    <ul className="mt-4 space-y-2 text-xs text-slate-600">
+                      {item.place && (
+                        <li className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span>{item.place}</span>
+                        </li>
+                      )}
+                      {item.startsAt && (
+                        <li className="flex items-center gap-2">
+                          <CalendarDays className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span>
+                            {new Date(item.startsAt).toLocaleDateString("en-GB", {
+                              dateStyle: "medium",
+                            })}
+                          </span>
+                        </li>
+                      )}
+                      {item.meta.map((m) => (
+                        <li key={m} className="flex items-center gap-2 text-slate-500">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                          <span>{m}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Card Footer */}
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <div>
+                      <span className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                        From
+                      </span>
+                      <span className="text-base font-bold text-slate-900">
+                        {formatMoney(item.fromPrice, item.currency)}
+                      </span>
+                    </div>
+
+                    <button

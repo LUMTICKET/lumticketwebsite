@@ -2178,3 +2178,29 @@ input {
 @media (prefers-reduced-motion: reduce) {
   .lum-ticket-svg { animation: none; transition: none; }
 }
+
+
+/* ---------- Paid ticket (real QR) ---------- */
+.lum-paid { display: flex; flex-direction: column; gap: 14px; }
+.lum-paid-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; padding-right: 40px; }
+.lum-paid-head h3 { margin: 0; font-size: 24px; letter-spacing: -0.04em; }
+.lum-verify {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border-radius: 20px;
+  color: #5d6a7d; background: rgba(4, 32, 69, 0.06);
+  font-size: 11px; font-weight: 650;
+}
+.lum-verify.is-ok { color: #1d5a35; background: #e6f4ea; }
+.lum-paid-ticket { display: grid; place-items: center; }
+.lum-paid-ticket .lum-ticket-svg.is-tall { max-width: 340px; }
+.lum-paid-lead { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 4px 0 0; color: #5d6a7d; font-size: 12px; line-height: 1.6; text-align: center; }
+.lum-paid-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.lum-paid-actions button { cursor: pointer; }
+.lum-paid-actions button:disabled { opacity: 0.6; cursor: wait; }
+.lum-paid-done { margin-top: 6px; }
+@media (max-width: 560px) {
+  .lum-paid-actions > * { flex: 1 1 calc(50% - 8px); }
+}
+@media print {
+  .lum-modal-backdrop { position: static; background: none; backdrop-filter: none; }
+}

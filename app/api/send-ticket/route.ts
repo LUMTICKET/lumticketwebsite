@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import QRCode from "qrcode";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,7 @@ export async function POST(req: Request) {
     typeof email !== "string" ||
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
     typeof reference !== "string" ||
+    !/^[A-Za-z0-9._-]{4,64}$/.test(reference) ||
     typeof title !== "string"
   ) {
     return NextResponse.json({ sent: false, error: "Invalid ticket details" }, { status: 400 });
@@ -46,16 +48,30 @@ export async function POST(req: Request) {
     )
     .join("");
 
+  // Same payload as the on-screen ticket: the booking reference, which the operator scanner
+  // sends to POST /api/validations.
+  const qrPng = await QRCode.toBuffer(reference, {
+    errorCorrectionLevel: "M",
+    margin: 2,
+    width: 360,
+    color: { dark: "#042045", light: "#ffffff" },
+  });
+
   try {
     await transporter.sendMail({
       from: FROM_EMAIL ?? SMTP_USER,
       to: email,
       subject: `Your Lumticket ticket ${reference}`,
-      text: `Your booking is confirmed.\n\nReference: ${reference}\nTicket: ${title}\nWhen: ${when}\nQuantity: ${quantity}\nTotal: ${total}\n\nShow this reference at boarding or entry.`,
+      attachments: [{ filename: `lumticket-${reference}.png`, content: qrPng, cid: "ticket-qr", contentType: "image/png" }],
+      text: `Your booking is confirmed.\n\nReference: ${reference}\nTicket: ${title}\nWhen: ${when}\nQuantity: ${quantity}\nTotal: ${total}\n\nShow the QR code (attached) or this reference at boarding or entry.`,
       html: `<div style="font-family:Arial,sans-serif;color:#042045;max-width:480px">
         <h2 style="margin:0 0 4px">Your ticket is confirmed ✓</h2>
         <p style="color:#788394;margin:0 0 18px">Show this reference at boarding or entry.</p>
         <table style="border-collapse:collapse;font-size:14px">${rows}</table>
+        <div style="margin-top:20px;display:inline-block;padding:10px;border:1px solid #e6e1d3;border-radius:12px;background:#fff">
+          <img src="cid:ticket-qr" width="180" height="180" alt="Ticket QR code ${esc(reference)}" style="display:block" />
+        </div>
+        <p style="margin:8px 0 0;font-size:12px;color:#788394">Scan at boarding or entry.</p>
         <p style="margin-top:22px;font-size:12px;color:#788394">Lumticket — bus, parcels &amp; event tickets across SADC.</p>
       </div>`,
     });

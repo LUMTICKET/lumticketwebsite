@@ -81,68 +81,6 @@ export default function HomePage() {
       {/* --- NAVIGATION BAR --- */}
       <SiteNav />
 
-      {/* --- HERO SECTION --- */}
-      <section className="lum-hero" id="discover">
-        <div className="lum-hero-copy">
-          <div className="lum-eyebrow">
-            <span className="lum-eyebrow-dot" />
-            ONE PLATFORM FOR SADC TRAVEL, PARCELS & EVENTS
-          </div>
-
-          <h1>
-            Travel further,
-            <br />
-            <span>ship faster & experience more.</span>
-          </h1>
-
-          <p className="lum-hero-description">
-            Book intercity buses, send tracked parcel freight, and get secure
-            event tickets across Southern Africa—all backed by instant offline QR
-            validation and verified mobile money payments.
-          </p>
-
-          {/* Core Conversion Buttons */}
-          <div className="lum-hero-actions">
-            <a href="/tickets" className="lum-button-primary">
-              <Ticket size={18} />
-              <span>Buy Tickets & Travel</span>
-            </a>
-            <a href="https://business.lumticket.com" className="lum-button-gold">
-              <Building2 size={18} />
-              <span>Start a Business</span>
-            </a>
-          </div>
-
-          <div className="lum-hero-note">
-            <span className="lum-note-icon">
-              <ShieldCheck size={18} />
-            </span>
-            <span>
-              <strong>Licensed & Trusted Regional Network</strong>
-              <small>
-                Secure mobile money, multi-currency checkout, and instant QR verification.
-              </small>
-            </span>
-          </div>
-        </div>
-
-        <div className="lum-hero-visual">
-
-          <TicketHero3D />
-
-          <div className="lum-floating-note">
-            <span className="lum-floating-icon">
-              <QrCode size={18} />
-            </span>
-            <span>
-              <strong>Digital Boarding Pass</strong>
-              <small>Offline-ready QR ticket generated instantly</small>
-            </span>
-            <ArrowUpRight size={17} />
-          </div>
-        </div>
-      </section>
-
       {/* --- LIVE TICKETS: events, buses & travel from the Lumticket API --- */}
       <section className="lum-experiences" id="tickets">
         <div className="lum-section-heading">

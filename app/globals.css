@@ -1,4 +1,3 @@
-
 /* LumTicket — brand and layout */
 
 .lum-page {
@@ -1500,7 +1499,8 @@ input {
     display: inline-flex;
   }
 
-  .lum-button-outline-sm {
+  /* Hides the secondary nav button only — not buttons inside page content */
+  .lum-nav .lum-button-outline-sm {
     display: none;
   }
 }
@@ -1664,6 +1664,203 @@ input {
   }
 }
 
+/* ---------- Bus route search panel ---------- */
+.lum-bus-search,
+.lum-bus-search * {
+  box-sizing: border-box;
+}
+
+.lum-bus-search {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  margin: 38px 0 0;
+  padding: 18px 20px 22px;
+  border: 1px solid var(--lum-border);
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 14px 36px rgba(4, 32, 69, 0.08);
+}
+
+/* One way / Return */
+.lum-trip-toggle {
+  display: inline-flex;
+  gap: 4px;
+  width: fit-content;
+  padding: 4px;
+  border-radius: 999px;
+  background: #f4f2ec;
+}
+.lum-trip-toggle button {
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 999px;
+  color: #4a5666;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.lum-trip-toggle button:hover:not(.active) {
+  background: rgba(4, 32, 69, 0.06);
+}
+.lum-trip-toggle button.active {
+  color: #fff;
+  background: var(--lum-navy);
+}
+
+/* Fields */
+.lum-bus-search-fields {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.lum-bs-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  height: 54px;
+  padding: 0 16px;
+  border: 1.5px solid #e6e1d3;
+  border-radius: 16px;
+  color: #7b8696;
+  background: #fff;
+  cursor: text;
+  transition: border-color 150ms ease, box-shadow 150ms ease, color 150ms ease;
+}
+.lum-bs-field:hover {
+  border-color: #d3cbb4;
+}
+.lum-bs-field:focus-within {
+  border-color: var(--lum-gold);
+  box-shadow: 0 0 0 3px rgba(204, 159, 47, 0.22);
+  color: var(--lum-navy);
+}
+.lum-bs-field svg {
+  flex: none;
+}
+.lum-bs-field input,
+.lum-bs-field select {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: var(--lum-navy);
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+}
+.lum-bs-field input::placeholder {
+  color: #8a94a3;
+  font-weight: 400;
+}
+.lum-bs-field input[type="date"] {
+  cursor: pointer;
+}
+.lum-bs-field input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.55;
+}
+.lum-bs-field input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+.lum-bs-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 22px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%237b8696' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right center;
+}
+
+/* Actions */
+.lum-bus-search-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.lum-bs-submit,
+.lum-bs-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 750;
+  transition: filter 150ms ease, transform 150ms ease, border-color 150ms ease;
+}
+.lum-bs-submit {
+  padding: 0 44px;
+  border: 0;
+  color: #1c2735;
+  background: var(--lum-gold);
+  box-shadow: 0 8px 20px rgba(204, 159, 47, 0.2);
+}
+.lum-bs-submit:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+.lum-bs-submit:active {
+  transform: translateY(0);
+}
+.lum-bs-clear {
+  padding: 0 24px;
+  border: 1.5px solid var(--lum-border);
+  color: var(--lum-navy);
+  background: transparent;
+}
+.lum-bs-clear:hover {
+  border-color: rgba(4, 32, 69, 0.35);
+}
+
+/* Result summary line */
+.lum-search-summary {
+  margin: 0 0 18px;
+  color: #4a5666;
+  font-size: 13px;
+}
+.lum-search-summary strong {
+  color: var(--lum-navy);
+}
+
+@media (max-width: 720px) {
+  .lum-bus-search {
+    margin-top: 28px;
+    padding: 14px 14px 18px;
+    border-radius: 20px;
+  }
+  .lum-bus-search-fields {
+    grid-template-columns: 1fr;
+  }
+  .lum-bs-field input,
+  .lum-bs-field select {
+    font-size: 16px; /* stops iOS zoom on focus */
+  }
+  .lum-bus-search-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* The discovery bar now sits under the search panel */
+.lum-bus-search + .lum-discovery-tools {
+  margin-top: 28px;
+}
+
 /* ---------- Marketplace (live tickets) ---------- */
 .lum-mkt-grid {
   display: grid;
@@ -1760,6 +1957,8 @@ input {
 }
 .lum-button-primary-card:hover:not(:disabled) { background: #0b3769; transform: translateY(-2px); }
 .lum-button-primary-card:disabled { opacity: 0.45; cursor: not-allowed; }
+/* Keep the Buy button level with the price (the shared button rule adds a top margin) */
+.lum-mkt-foot .lum-button-primary-card { margin-top: 0; }
 .lum-skeleton {
   min-height: 300px;
   border-color: transparent;
@@ -1768,6 +1967,8 @@ input {
 }
 @keyframes lum-shimmer { to { background-position: -200% 0; } }
 .lum-retry { margin: 14px auto 0; cursor: pointer; }
+/* "Try again" must stay visible on mobile */
+.lum-empty-state .lum-button-outline-sm { display: inline-flex; }
 
 /* ---------- Checkout modal ---------- */
 .lum-modal-backdrop {
@@ -1846,7 +2047,7 @@ input {
   border-radius: 7px;
   color: var(--lum-navy);
   background: white;
-  font-size: 14px; /* 16px-ish keeps iOS from zooming; 14 is fine on desktop */
+  font-size: 14px;
 }
 .lum-field input:focus { border-color: var(--lum-navy); outline: 2px solid rgba(204, 159, 47, 0.45); outline-offset: 0; }
 .lum-field-row { display: flex; gap: 10px; }
@@ -1891,196 +2092,7 @@ input {
 }
 @media (prefers-reduced-motion: reduce) {
   .lum-skeleton, .lum-spin { animation: none; }
-}
-
-/* Bus route search panel — replace the previous bus-search.css block with this */
-
-.lum-bus-search,
-.lum-bus-search * {
-  box-sizing: border-box;
-}
-
-.lum-bus-search {
-  width: 100%;
-  margin: 0 0 28px;
-  padding: 18px 20px 22px;
-  display: grid;
-  gap: 16px;
-  background: #fff;
-  border-radius: 28px;
-  box-shadow: 0 12px 32px rgba(11, 36, 71, 0.14);
-}
-
-/* ── One way / Return toggle ── */
-.lum-bus-search .lum-trip-toggle {
-  display: inline-flex;
-  gap: 6px;
-  padding: 4px;
-  width: fit-content;
-  background: #f4f2ec;
-  border-radius: 999px;
-}
-.lum-bus-search .lum-trip-toggle button {
-  padding: 8px 18px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: #4a5666;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.lum-bus-search .lum-trip-toggle button.active {
-  background: #0b2447;
-  color: #fff;
-}
-
-/* ── Fields grid ── */
-.lum-bus-search .lum-bus-search-fields {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-}
-
-.lum-bus-search .lum-field {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-width: 0;
-  height: 54px;
-  padding: 0 16px;
-  background: #fff;
-  border: 1.5px solid #e6e1d3;
-  border-radius: 16px;
-  color: #7b8696;
-  cursor: text;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-.lum-bus-search .lum-field:hover {
-  border-color: #d3cbb4;
-}
-.lum-bus-search .lum-field:focus-within {
-  border-color: #cfa032;
-  box-shadow: 0 0 0 3px rgba(207, 160, 50, 0.22);
-  color: #0b2447;
-}
-.lum-bus-search .lum-field svg {
-  flex: none;
-}
-
-.lum-bus-search .lum-field input,
-.lum-bus-search .lum-field select {
-  flex: 1;
-  min-width: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  box-shadow: none;
-  font: inherit;
-  font-size: 15px;
-  font-weight: 500;
-  color: #0b2447;
-}
-.lum-bus-search .lum-field input::placeholder {
-  color: #8a94a3;
-  font-weight: 400;
-}
-
-/* Date inputs */
-.lum-bus-search .lum-field input[type="date"] {
-  cursor: pointer;
-}
-.lum-bus-search .lum-field input[type="date"]::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  opacity: 0.55;
-}
-.lum-bus-search .lum-field input[type="date"]::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
-}
-
-/* Passenger select with custom chevron */
-.lum-bus-search .lum-field select {
-  appearance: none;
-  -webkit-appearance: none;
-  cursor: pointer;
-  padding-right: 22px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%237b8696' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0 center;
-}
-
-/* ── Actions ── */
-.lum-bus-search .lum-bus-search-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.lum-bus-search .lum-button-gold {
-  height: 52px;
-  padding: 0 44px;
-  border: 0;
-  border-radius: 999px;
-  background: #cfa032;
-  color: #0b2447;
-  font: inherit;
-  font-size: 16px;
-  font-weight: 800;
-  cursor: pointer;
-  transition: filter 0.15s, transform 0.05s;
-}
-.lum-bus-search .lum-button-gold:hover {
-  filter: brightness(1.06);
-}
-.lum-bus-search .lum-button-gold:active {
-  transform: translateY(1px);
-}
-.lum-bus-search .lum-trip-toggle button:focus-visible,
-.lum-bus-search .lum-button-gold:focus-visible,
-.lum-bus-search .lum-button-outline-sm:focus-visible {
-  outline: 2px solid #cfa032;
-  outline-offset: 2px;
-}
-
-/* ── Result summary line ── */
-.lum-search-summary {
-  margin: 4px 0 18px;
-  font-size: 14px;
-  opacity: 0.85;
-}
-
-/* ── Tablet / phone ── */
-@media (max-width: 640px) {
-  .lum-bus-search {
-    padding: 14px 14px 18px;
-    border-radius: 22px;
-  }
-  .lum-bus-search .lum-bus-search-fields {
-    grid-template-columns: 1fr;
-  }
-  /* 16px stops iOS from zooming into inputs */
-  .lum-bus-search .lum-field input,
-  .lum-bus-search .lum-field select {
-    font-size: 16px;
-  }
-  .lum-bus-search .lum-bus-search-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .lum-bus-search .lum-button-gold {
-    width: 100%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lum-bus-search * {
-    transition: none !important;
-  }
+  .lum-bus-search *,
+  .lum-bs-submit,
+  .lum-bs-clear { transition: none !important; }
 }

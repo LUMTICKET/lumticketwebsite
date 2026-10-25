@@ -1,284 +1,649 @@
-"use client";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ArrowLeftRight,
+
   ArrowRight,
+
   Bus,
+
   CalendarDays,
+
   Compass,
+
   MapPin,
+
   RefreshCw,
+
   Search,
+
   Users,
-  X,
+
 } from "lucide-react";
+
 import { fetchEvents, fetchRoutes, formatMoney, type Listing } from "@/lib/api";
+
 import CheckoutModal from "@/components/CheckoutModal";
 
+
+
 const TABS = ["All", "Events", "Buses", "Travel & Tourism"] as const;
+
 type Tab = (typeof TABS)[number];
 
+
+
 const STATUS_LABEL: Record<string, string> = {
+
   "on-sale": "On sale",
+
   "selling-fast": "Selling fast",
+
   "sold-out": "Sold out",
+
 };
 
-const STATUS_STYLES: Record<string, string> = {
-  "on-sale": "bg-emerald-50 text-emerald-700 border-emerald-200",
-  "selling-fast": "bg-amber-50 text-amber-700 border-amber-200",
-  "sold-out": "bg-rose-50 text-rose-700 border-rose-200",
-};
+
 
 type TripType = "one-way" | "return";
 
+
+
 type SearchForm = {
+
   from: string;
+
   to: string;
+
   date: string;
+
   returnDate: string;
+
   passengers: number;
+
 };
+
+
 
 const EMPTY_FORM: SearchForm = { from: "", to: "", date: "", returnDate: "", passengers: 1 };
 
-function GroupIcon({ group }: { group?: string }) {
-  if (group === "Buses") return <Bus className="w-6 h-6 text-blue-600" />;
-  if (group === "Events") return <CalendarDays className="w-6 h-6 text-purple-600" />;
-  return <Compass className="w-6 h-6 text-emerald-600" />;
+
+
+function GroupIcon({ group }: { group: Listing["group"] }) {
+
+  if (group === "Buses") return <Bus size={30} strokeWidth={1.5} />;
+
+  if (group === "Events") return <CalendarDays size={30} strokeWidth={1.5} />;
+
+  return <Compass size={30} strokeWidth={1.5} />;
+
 }
 
+
+
 export default function Marketplace() {
+
   const [items, setItems] = useState<Listing[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [failed, setFailed] = useState<boolean>(false);
+
+  const [loading, setLoading] = useState(true);
+
+  const [failed, setFailed] = useState(false);
+
   const [tab, setTab] = useState<Tab>("All");
-  const [search, setSearch] = useState<string>("");
+
+  const [search, setSearch] = useState("");
+
   const [selected, setSelected] = useState<Listing | null>(null);
 
-  // Route search states
+
+
+  // Route search (Leaving from / Going to / date / passengers)
+
   const [trip, setTrip] = useState<TripType>("one-way");
+
   const [form, setForm] = useState<SearchForm>(EMPTY_FORM);
+
   const [applied, setApplied] = useState<SearchForm | null>(null);
 
+
+
   const load = useCallback(async () => {
+
     setLoading(true);
+
     setFailed(false);
-    try {
-      const [events, routes] = await Promise.allSettled([fetchEvents(), fetchRoutes()]);
-      const merged: Listing[] = [
-        ...(routes.status === "fulfilled" && Array.isArray(routes.value) ? routes.value : []),
-        ...(events.status === "fulfilled" && Array.isArray(events.value) ? events.value : []),
-      ];
-      setItems(merged);
-      setFailed(events.status === "rejected" && routes.status === "rejected");
-    } catch {
-      setFailed(true);
-    } finally {
-      setLoading(false);
-    }
+
+    const [events, routes] = await Promise.allSettled([fetchEvents(), fetchRoutes()]);
+
+    const merged = [
+
+      ...(routes.status === "fulfilled" ? routes.value : []),
+
+      ...(events.status === "fulfilled" ? events.value : []),
+
+    ];
+
+    setItems(merged);
+
+    setFailed(events.status === "rejected" && routes.status === "rejected");
+
+    setLoading(false);
+
   }, []);
 
+
+
   useEffect(() => {
+
     load();
+
   }, [load]);
 
-  const runSearch = (e: React.FormEvent<HTMLFormElement>) => {
+
+
+  const runSearch = (e: React.FormEvent) => {
+
     e.preventDefault();
-    setTab("Buses");
+
+    setTab("Buses"); // a route search only makes sense for buses
+
     setSearch("");
+
     setApplied({ ...form, returnDate: trip === "return" ? form.returnDate : "" });
+
   };
+
+
 
   const clearSearch = () => {
+
     setApplied(null);
+
     setForm(EMPTY_FORM);
+
     setTrip("one-way");
+
   };
 
-  const swapLocations = () => {
-    setForm((prev) => ({ ...prev, from: prev.to, to: prev.from }));
-  };
+
 
   const filtered = useMemo(() => {
+
     const term = search.trim().toLowerCase();
+
     const from = applied?.from.trim().toLowerCase() ?? "";
+
     const to = applied?.to.trim().toLowerCase() ?? "";
 
+
+
     return items.filter((i) => {
+
       if (tab !== "All" && i.group !== tab) return false;
 
+
+
       if (applied) {
-        const metaList = Array.isArray(i.meta) ? i.meta : [];
-        const haystack = [i.title, i.subtitle, i.place, ...metaList]
-          .filter((val): val is string => Boolean(val))
+
+        // If your route listings have dedicated origin/destination fields,
+
+        // match against those here instead of the combined text.
+
+        const haystack = [i.title, i.subtitle, i.place, ...i.meta]
+
+          .filter(Boolean)
+
           .join(" ")
+
           .toLowerCase();
 
         if (from && !haystack.includes(from)) return false;
+
         if (to && !haystack.includes(to)) return false;
+
         if (applied.date && i.startsAt && i.startsAt.slice(0, 10) !== applied.date) return false;
+
       }
 
+
+
       return (
+
         !term ||
-        [i.title, i.subtitle, (i as Record<string, unknown>).operator, i.place, i.group]
-          .filter((f): f is string => typeof f === "string" && Boolean(f.trim()))
-          .some((f) => f.toLowerCase().includes(term))
+
+        [i.title, i.subtitle, i.operator, i.place, i.group]
+
+          .filter(Boolean)
+
+          .some((f) => f!.toLowerCase().includes(term))
+
       );
+
     });
+
   }, [items, tab, search, applied]);
 
+
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 font-sans">
-      {/* ───────── Main Bus & Route Search Box ───────── */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5">
-        {/* Trip Type Selector */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg w-fit">
+
+    <>
+
+      {/* ───────── Bus route search ───────── */}
+
+      <form className="lum-bus-search" onSubmit={runSearch}>
+
+        <div className="lum-trip-toggle" role="radiogroup" aria-label="Trip type">
+
           {(["one-way", "return"] as const).map((t) => (
+
             <button
+
               key={t}
+
               type="button"
+
+              role="radio"
+
+              aria-checked={trip === t}
+
+              className={trip === t ? "active" : ""}
+
               onClick={() => setTrip(t)}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                trip === t
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
+
             >
+
               {t === "one-way" ? "One way" : "Return"}
+
             </button>
+
           ))}
+
         </div>
 
-        {/* Input Fields Form */}
-        <form onSubmit={runSearch} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-            {/* Leaving From */}
-            <div className="md:col-span-3 relative">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                From
-              </label>
-              <div className="relative">
-                <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Leaving from..."
-                  value={form.from}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setForm({ ...form, from: e.target.value })
-                  }
-                  className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all placeholder:text-slate-400 text-slate-800"
-                />
-              </div>
-            </div>
 
-            {/* Swap Button */}
-            <div className="hidden md:flex md:col-span-1 justify-center pt-5">
-              <button
-                type="button"
-                onClick={swapLocations}
-                title="Swap departure and arrival"
-                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors border border-slate-200"
-              >
-                <ArrowLeftRight className="w-4 h-4" />
-              </button>
-            </div>
 
-            {/* Going To */}
-            <div className="md:col-span-3 relative">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                To
-              </label>
-              <div className="relative">
-                <Bus className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Going to..."
-                  value={form.to}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setForm({ ...form, to: e.target.value })
-                  }
-                  className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all placeholder:text-slate-400 text-slate-800"
-                />
-              </div>
-            </div>
+        <div className="lum-bus-search-fields">
 
-            {/* Departure Date */}
-            <div className={trip === "return" ? "md:col-span-2 relative" : "md:col-span-3 relative"}>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                Depart
-              </label>
-              <div className="relative">
-                <CalendarDays className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="date"
-                  value={form.date}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setForm({ ...form, date: e.target.value })
-                  }
-                  className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-slate-800"
-                />
-              </div>
-            </div>
+          <label className="lum-field">
 
-            {/* Return Date */}
-            {trip === "return" && (
-              <div className="md:col-span-2 relative">
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                  Return
-                </label>
-                <div className="relative">
-                  <CalendarDays className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="date"
-                    min={form.date || undefined}
-                    value={form.returnDate}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setForm({ ...form, returnDate: e.target.value })
-                    }
-                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-slate-800"
-                  />
-                </div>
-              </div>
-            )}
+            <MapPin size={16} />
 
-            {/* Passengers */}
-            <div className="md:col-span-1 relative">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                Pass.
-              </label>
-              <div className="relative">
-                <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                <select
-                  value={form.passengers}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                    setForm({ ...form, passengers: Number(e.target.value) })
-                  }
-                  className="w-full pl-9 pr-2 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-slate-800 appearance-none"
-                >
-                  {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
+            <input
 
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-2">
-            {applied && (
-              <button
-                type="button"
-                onClick={clearSearch}
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors flex items-center gap-1.5"
-              >
-                <X className="w-4 h-4" /> Clear search
-              </button>
-            )}
+              placeholder="Leaving from"
+
+              value={form.from}
+
+              onChange={(e) => setForm({ ...form, from: e.target.value })}
+
+              aria-label="Leaving from"
+
+            />
+
+          </label>
+
+
+
+          <label className="lum-field">
+
+            <Bus size={16} />
+
+            <input
+
+              placeholder="Going to"
+
+              value={form.to}
+
+              onChange={(e) => setForm({ ...form, to: e.target.value })}
+
+              aria-label="Going to"
+
+            />
+
+          </label>
+
+
+
+          <label className="lum-field">
+
+            <CalendarDays size={16} />
+
+            <input
+
+              type="date"
+
+              value={form.date}
+
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+
+              aria-label="Departure date"
+
+            />
+
+          </label>
+
+
+
+          {trip === "return" && (
+
+            <label className="lum-field">
+
+              <CalendarDays size={16} />
+
+              <input
+
+                type="date"
+
+                min={form.date || undefined}
+
+                value={form.returnDate}
+
+                onChange={(e) => setForm({ ...form, returnDate: e.target.value })}
+
+                aria-label="Return date"
+
+              />
+
+            </label>
+
+          )}
+
+
+
+          <label className="lum-field">
+
+            <Users size={16} />
+
+            <select
+
+              value={form.passengers}
+
+              onChange={(e) => setForm({ ...form, passengers: Number(e.target.value) })}
+
+              aria-label="Passengers"
+
+            >
+
+              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+
+                <option key={n} value={n}>
+
+                  {n} passenger{n > 1 ? "s" : ""}
+
+                </option>
+
+              ))}
+
+            </select>
+
+          </label>
+
+        </div>
+
+
+
+        <div className="lum-bus-search-actions">
+
+          <button type="submit" className="lum-button-gold">
+
+            Search
+
+          </button>
+
+          {applied && (
+
+            <button type="button" className="lum-button-outline-sm" onClick={clearSearch}>
+
+              Clear
+
+            </button>
+
+          )}
+
+        </div>
+
+      </form>
+
+
+
+      {/* ───────── Tabs + keyword search ───────── */}
+
+      <div className="lum-discovery-tools">
+
+        <div className="lum-category-tabs" role="tablist">
+
+          {TABS.map((t) => (
+
             <button
-              type="submit"
-              className="px-6 py-2.5 text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-50
+
+              key={t}
+
+              role="tab"
+
+              className={tab === t ? "active" : ""}
+
+              aria-selected={tab === t}
+
+              onClick={() => setTab(t)}
+
+            >
+
+              {t}
+
+            </button>
+
+          ))}
+
+        </div>
+
+
+
+        <label className="lum-experience-search">
+
+          <Search size={17} />
+
+          <input
+
+            value={search}
+
+            onChange={(e) => setSearch(e.target.value)}
+
+            placeholder="Search routes, events, cities…"
+
+            aria-label="Search tickets"
+
+          />
+
+        </label>
+
+      </div>
+
+
+
+      {applied && (applied.from || applied.to || applied.date) && (
+
+        <p className="lum-search-summary" role="status">
+
+          Showing {filtered.length} result{filtered.length === 1 ? "" : "s"}
+
+          {applied.from && <> from <strong>{applied.from}</strong></>}
+
+          {applied.to && <> to <strong>{applied.to}</strong></>}
+
+          {applied.date && <> on <strong>{applied.date}</strong></>}
+
+        </p>
+
+      )}
+
+
+
+      {/* ───────── Results ───────── */}
+
+      {loading ? (
+
+        <div className="lum-mkt-grid" aria-busy="true">
+
+          {Array.from({ length: 6 }, (_, i) => (
+
+            <div className="lum-mkt-card lum-skeleton" key={i} />
+
+          ))}
+
+        </div>
+
+      ) : failed ? (
+
+        <div className="lum-empty-state" role="alert">
+
+          <p>We couldn&apos;t load tickets right now.</p>
+
+          <button className="lum-button-outline-sm lum-retry" onClick={load}>
+
+            <RefreshCw size={15} />
+
+            <span>Try again</span>
+
+          </button>
+
+        </div>
+
+      ) : filtered.length === 0 ? (
+
+        <p className="lum-empty-state" role="status">
+
+          {items.length === 0
+
+            ? "No tickets are on sale yet. Check back soon."
+
+            : applied
+
+              ? "No buses match that route or date. Try different cities or clear the search."
+
+              : "Nothing matches your search. Try another keyword or category."}
+
+        </p>
+
+      ) : (
+
+        <div className="lum-mkt-grid">
+
+          {filtered.map((item) => {
+
+            const soldOut = item.status === "sold-out";
+
+            return (
+
+              <article className="lum-mkt-card" key={item.key}>
+
+                <div
+
+                  className={`lum-mkt-visual is-${
+
+                    item.group === "Buses" ? "bus" : item.group === "Events" ? "event" : "travel"
+
+                  }`}
+
+                >
+
+                  <GroupIcon group={item.group} />
+
+                  <span className={`lum-status is-${item.status}`}>
+
+                    {STATUS_LABEL[item.status] ?? item.status}
+
+                  </span>
+
+                </div>
+
+                <div className="lum-mkt-body">
+
+                  <span className="lum-card-category">{item.group}</span>
+
+                  <h3>{item.title}</h3>
+
+                  {item.subtitle && <p className="lum-mkt-sub">{item.subtitle}</p>}
+
+                  <ul className="lum-mkt-meta">
+
+                    {item.place && (
+
+                      <li>
+
+                        <MapPin size={13} />
+
+                        {item.place}
+
+                      </li>
+
+                    )}
+
+                    {item.startsAt && (
+
+                      <li>
+
+                        <CalendarDays size={13} />
+
+                        {new Date(item.startsAt).toLocaleDateString("en-GB", { dateStyle: "medium" })}
+
+                      </li>
+
+                    )}
+
+                    {item.meta.map((m) => (
+
+                      <li key={m}>{m}</li>
+
+                    ))}
+
+                  </ul>
+
+                  <div className="lum-mkt-foot">
+
+                    <span className="lum-mkt-price">
+
+                      <small>From</small>
+
+                      {formatMoney(item.fromPrice, item.currency)}
+
+                    </span>
+
+                    <button
+
+                      className="lum-button-primary-card"
+
+                      disabled={soldOut}
+
+                      onClick={() => setSelected(item)}
+
+                    >
+
+                      <span>{soldOut ? "Sold out" : "Buy ticket"}</span>
+
+                      {!soldOut && <ArrowRight size={16} />}
+
+                    </button>
+
+                  </div>
+
+                </div>
+
+              </article>
+
+            );
+
+          })}
+
+        </div>
+
+      )}
+
+
+
+      {selected && <CheckoutModal item={selected} onClose={() => setSelected(null)} />}
+
+    </>
+
+  );
+
+} 

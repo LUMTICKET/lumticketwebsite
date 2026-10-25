@@ -133,7 +133,7 @@ export default function Marketplace() {
         </div>
 
         <div className="lum-bus-search-fields">
-          <label className="lum-field">
+          <label className="lum-bs-field">
             <MapPin size={16} />
             <input
               placeholder="Leaving from"
@@ -144,7 +144,7 @@ export default function Marketplace() {
             />
           </label>
 
-          <label className="lum-field">
+          <label className="lum-bs-field">
             <Bus size={16} />
             <input
               placeholder="Going to"
@@ -155,7 +155,7 @@ export default function Marketplace() {
             />
           </label>
 
-          <label className="lum-field">
+          <label className="lum-bs-field">
             <CalendarDays size={16} />
             <input
               type="date"
@@ -166,7 +166,7 @@ export default function Marketplace() {
           </label>
 
           {trip === "return" && (
-            <label className="lum-field">
+            <label className="lum-bs-field">
               <CalendarDays size={16} />
               <input
                 type="date"
@@ -178,7 +178,7 @@ export default function Marketplace() {
             </label>
           )}
 
-          <label className="lum-field">
+          <label className="lum-bs-field">
             <Users size={16} />
             <select
               value={form.passengers}
@@ -195,11 +195,11 @@ export default function Marketplace() {
         </div>
 
         <div className="lum-bus-search-actions">
-          <button type="submit" className="lum-button-gold">
+          <button type="submit" className="lum-bs-submit">
             Search
           </button>
           {applied && (
-            <button type="button" className="lum-button-outline-sm" onClick={clearSearch}>
+            <button type="button" className="lum-bs-clear" onClick={clearSearch}>
               Clear
             </button>
           )}

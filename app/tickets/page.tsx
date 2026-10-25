@@ -11,7 +11,7 @@ export default function TicketsPage() {
           <div>
             <div className="lum-eyebrow">
               <span className="lum-eyebrow-dot" />
-              LIVE FROM THE LUMTICKET API
+              GET YOURS TODAY
             </div>
             <h1>
               Latest <span>tickets</span>

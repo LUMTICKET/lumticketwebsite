@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { fetchEvents, fetchRoutes, formatMoney, type Listing } from "@/lib/api";
 import CheckoutModal from "@/components/CheckoutModal";
+import TicketPreview from "@/components/TicketPreview";
 
 const TABS = ["All", "Events", "Buses", "Travel & Tourism"] as const;
 type Tab = (typeof TABS)[number];
@@ -47,7 +48,8 @@ export default function Marketplace() {
   const [failed, setFailed] = useState(false);
   const [tab, setTab] = useState<Tab>("All");
   const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<Listing | null>(null);
+  const [selected, setSelected] = useState<Listing | null>(null); // ticket preview
+  const [checkout, setCheckout] = useState<Listing | null>(null); // payment step
 
   // Route search (Leaving from / Going to / date / passengers)
   const [trip, setTrip] = useState<TripType>("one-way");
@@ -312,7 +314,7 @@ export default function Marketplace() {
                       disabled={soldOut}
                       onClick={() => setSelected(item)}
                     >
-                      <span>{soldOut ? "Sold out" : "Buy ticket"}</span>
+                      <span>{soldOut ? "Sold out" : "Buy now"}</span>
                       {!soldOut && <ArrowRight size={16} />}
                     </button>
                   </div>
@@ -323,7 +325,18 @@ export default function Marketplace() {
         </div>
       )}
 
-      {selected && <CheckoutModal item={selected} onClose={() => setSelected(null)} />}
+      {selected && !checkout && (
+        <TicketPreview item={selected} onClose={() => setSelected(null)} onContinue={() => setCheckout(selected)} />
+      )}
+      {checkout && (
+        <CheckoutModal
+          item={checkout}
+          onClose={() => {
+            setCheckout(null);
+            setSelected(null);
+          }}
+        />
+      )}
     </>
   );
 }

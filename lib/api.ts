@@ -83,6 +83,19 @@ export interface Listing {
   currency: string;
   status: string;
   meta: string[]; // small facts shown on the card (duration, rating, departures...)
+  eventId?: number;
+  /** Ticket tiers from the catalog (General / VIP ...). Only listings with tiers can be bought online. */
+  tiers?: Tier[];
+  maxPerUser?: number;
+}
+
+export interface Tier {
+  id: number; // ticket_types.id — what the checkout endpoint takes
+  name: string;
+  price: number;
+  currency: string;
+  remaining?: number;
+  perks: string[];
 }
 
 type Raw = Record<string, unknown>;
@@ -112,7 +125,21 @@ function normalizeEvent(e: Raw): Listing {
   const meta: string[] = [];
   const organizer = str(e.organizer);
   if (organizer) meta.push(organizer);
+  const rawTiers = toArray(e, "tickets", "tiers");
+  const tiers: Tier[] = rawTiers
+    .map((t) => ({
+      id: num(t.id) ?? 0,
+      name: str(t.name) ?? "Ticket",
+      price: num(t.price) ?? 0,
+      currency: str(t.currency) ?? str(e.currency) ?? "MWK",
+      remaining: num(t.remaining),
+      perks: Array.isArray(t.perks) ? (t.perks as unknown[]).filter((p): p is string => typeof p === "string") : [],
+    }))
+    .filter((t) => t.id > 0 && t.price > 0 && (t.remaining === undefined || t.remaining > 0));
   return {
+    eventId: num(e.id),
+    maxPerUser: num(e.maxPerUser),
+    tiers: tiers.length ? tiers : undefined,
     key: `event-${e.id}`,
     kind: isBus ? "bus" : "event",
     group,
@@ -248,6 +275,7 @@ export interface BookingInput {
   scheduledFor: string; // ISO date-time
   amount: number; // total, minor units
   currency: string;
+  paymentId?: number; // succeeded OneKhusa payment backing this booking
 }
 
 export interface BookingResult {
@@ -298,6 +326,86 @@ export async function fetchBooking(reference: string): Promise<BookingRecord | n
   } catch {
     return null;
   }
+}
+
+/* --------------------------------- payments --------------------------------- */
+
+export type PayMethod = "tnm" | "airtel" | "card";
+
+export interface TicketBooking {
+  reference: string; // LMT-EVT-… — also the QR payload
+  title?: string;
+  scheduledFor?: string;
+  amount?: number;
+  quantity?: number;
+  status?: string;
+}
+
+export interface CheckoutStart {
+  paymentId: number;
+  checkoutUrl?: string; // card only
+}
+
+/**
+ * POST /api/checkout/tickets. The server prices the order from the ticket type and decides which
+ * business is paid; we only say what we want and how we'll pay.
+ */
+export async function startTicketCheckout(input: {
+  ticketTypeId: number;
+  quantity: number;
+  method: PayMethod;
+  phone?: string;
+}): Promise<CheckoutStart> {
+  const session = getSession();
+  if (!session) throw new ApiError(401, "Please sign in to continue.");
+  const data = await request<Raw>("/api/checkout/tickets", { method: "POST", token: session.token, body: input });
+  const paymentId = num(data.paymentId);
+  if (paymentId === undefined) throw new ApiError(502, "Payment started but no payment id was returned.");
+  return { paymentId, checkoutUrl: str(data.checkoutUrl) };
+}
+
+/**
+ * Polls GET /api/checkout/tickets/:paymentId until the signed OneKhusa webhook marks the payment
+ * paid and the API has issued the booking, or the payment fails / we time out.
+ */
+export async function waitForTicket(
+  paymentId: number,
+  opts: { timeoutMs?: number; intervalMs?: number } = {},
+): Promise<{ outcome: "issued"; booking: TicketBooking } | { outcome: "failed" | "timeout" | "sold-out" }> {
+  const session = getSession();
+  if (!session) throw new ApiError(401, "Please sign in to continue.");
+  const { timeoutMs = 180_000, intervalMs = 3_000 } = opts;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, intervalMs));
+    try {
+      const data = await request<Raw>(`/api/checkout/tickets/${paymentId}`, { token: session.token });
+      const status = str(data.status);
+      if (status === "failed") return { outcome: "failed" };
+      if (status === "succeeded") {
+        if (data.problem === "sold-out") return { outcome: "sold-out" };
+        const b = data.booking as Raw | undefined;
+        const reference = b && str(b.reference);
+        if (b && reference) {
+          return {
+            outcome: "issued",
+            booking: {
+              reference,
+              title: str(b.title),
+              scheduledFor: str(b.scheduledFor),
+              amount: num(b.amount),
+              quantity: num(b.quantity),
+              status: str(b.status),
+            },
+          };
+        }
+      }
+    } catch (err) {
+      if (err instanceof ApiError && (err.status === 401 || err.status === 404)) throw err;
+      /* transient network/server error — keep polling */
+    }
+  }
+  return { outcome: "timeout" };
 }
 
 /* ------------------------------- ticket email ------------------------------- */

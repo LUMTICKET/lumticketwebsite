@@ -271,6 +271,7 @@ export default function Marketplace() {
         <div className="lum-mkt-grid">
           {filtered.map((item) => {
             const soldOut = item.status === "sold-out";
+            const buyable = !!item.tiers?.length;
             return (
               <article className="lum-mkt-card" key={item.key}>
                 <div
@@ -311,11 +312,11 @@ export default function Marketplace() {
                     </span>
                     <button
                       className="lum-button-primary-card"
-                      disabled={soldOut}
+                      disabled={soldOut || !buyable}
                       onClick={() => setSelected(item)}
                     >
-                      <span>{soldOut ? "Sold out" : "Buy now"}</span>
-                      {!soldOut && <ArrowRight size={16} />}
+                      <span>{soldOut ? "Sold out" : buyable ? "Buy now" : "Coming soon"}</span>
+                      {!soldOut && buyable && <ArrowRight size={16} />}
                     </button>
                   </div>
                 </div>

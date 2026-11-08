@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2, Mail, Minus, Plus, X } from "lucide-react";
 import PaidTicket, { type VerifyState } from "@/components/PaidTicket";
 import {
   ApiError,
-  createBooking,
-  fetchBooking,
   formatMoney,
   getSession,
   resendTwoFactor,
@@ -14,8 +12,11 @@ import {
   signIn,
   signUp,
   startGuestSession,
+  startTicketCheckout,
   verifyTwoFactor,
+  waitForTicket,
   type Listing,
+  type PayMethod,
 } from "@/lib/api";
 
 type Mode = "guest" | "signin" | "signup";
@@ -31,7 +32,7 @@ interface Receipt {
   holder?: string;
 }
 
-const MAX_QTY = 10;
+const MAX_QTY_CAP = 10;
 
 function formatWhen(iso: string) {
   const d = new Date(iso);
@@ -41,6 +42,7 @@ function formatWhen(iso: string) {
 }
 
 export default function CheckoutModal({ item, onClose }: { item: Listing; onClose: () => void }) {
+  const MAX_QTY = Math.min(MAX_QTY_CAP, item.maxPerUser ?? MAX_QTY_CAP);
   const [mode, setMode] = useState<Mode>("guest");
   const [step, setStep] = useState<Step>("form");
   const [email, setEmail] = useState(() => getSession()?.email ?? "");
@@ -49,7 +51,6 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [qty, setQty] = useState(1);
-  const [date, setDate] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -57,12 +58,18 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [verify, setVerify] = useState<VerifyState>("checking");
   const [bookingStatus, setBookingStatus] = useState<string | undefined>();
+  const [tierIdx, setTierIdx] = useState(0);
+  const [method, setMethod] = useState<PayMethod>("tnm");
+  const [payPhone, setPayPhone] = useState("");
+  const [payNote, setPayNote] = useState("");
+  const [cardUrl, setCardUrl] = useState("");
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  const needsDate = !item.startsAt;
-  const total = item.fromPrice * qty;
+  const tier = item.tiers?.[tierIdx];
+  const unitPrice = tier?.price ?? item.fromPrice;
+  const total = unitPrice * qty;
   const soldOut = item.status === "sold-out";
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const notBuyable = !item.tiers?.length;
 
   // Escape to close, lock page scroll while open, focus the dialog.
   useEffect(() => {
@@ -77,24 +84,49 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
     };
   }, [onClose]);
 
-  const scheduledFor = needsDate ? (date ? `${date}T00:00:00.000Z` : "") : item.startsAt!;
 
   async function completeBooking(customerEmail: string) {
-    const title = qty > 1 ? `${item.title} (${qty} tickets)` : item.title;
-    const { reference } = await createBooking({
-      kind: item.kind,
-      title,
-      scheduledFor,
-      amount: total,
-      currency: item.currency,
+    if (!tier) {
+      throw new ApiError(400, "This listing can't be bought online yet. Please try another one.");
+    }
+    const phoneDigits = payPhone.trim();
+    if (method !== "card" && !phoneDigits) throw new ApiError(400, "Enter your mobile money number.");
+
+    // 1. Start the OneKhusa payment. The API prices the order itself from the ticket type.
+    setPayNote(method === "card" ? "Opening secure card checkout…" : "Check your phone and approve the payment prompt…");
+    const started = await startTicketCheckout({
+      ticketTypeId: tier.id,
+      quantity: qty,
+      method,
+      ...(method !== "card" ? { phone: phoneDigits } : {}),
     });
-    // Date-only travel dates are shown without a made-up time of day.
-    const when = formatWhen(needsDate ? date : scheduledFor);
+    if (method === "card") {
+      if (!started.checkoutUrl) throw new ApiError(502, "Card checkout did not return a payment page.");
+      setCardUrl(started.checkoutUrl);
+      window.open(started.checkoutUrl, "_blank", "noopener");
+      setPayNote("Complete the card payment in the new tab. We'll confirm it here automatically.");
+    }
+
+    // 2. Wait for the signed webhook; the API issues the booking once the payment has succeeded.
+    const result = await waitForTicket(started.paymentId);
+    if (result.outcome === "failed") {
+      throw new ApiError(402, "The payment was declined or cancelled, so no ticket was issued.");
+    }
+    if (result.outcome === "sold-out") {
+      throw new ApiError(409, `The last tickets sold out as you paid. Your payment (#${started.paymentId}) has been flagged for a refund.`);
+    }
+    if (result.outcome === "timeout") {
+      throw new ApiError(408, `We haven't received payment confirmation yet. If money left your account, quote payment #${started.paymentId} to support.`);
+    }
+    const { reference } = result.booking;
+    setPayNote("");
+
+    const when = formatWhen(item.startsAt ?? result.booking.scheduledFor ?? "");
     const totalLabel = formatMoney(total, item.currency);
     const emailed = await sendTicketEmail({
       email: customerEmail,
       reference,
-      title: item.title,
+      title: `${item.title} — ${tier.name}`,
       when,
       quantity: qty,
       total: totalLabel,
@@ -108,24 +140,24 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
       quantity: qty,
       holder: name.trim() || undefined,
     });
-    setVerify("checking");
+    setVerify("ok"); // the reference comes straight from the API's booking record
+    setBookingStatus(result.booking.status);
     setStep("success");
-    // Read the booking back so the ticket can say the QR reference really exists in Lumticket.
-    fetchBooking(reference).then((b) => {
-      setVerify(b ? "ok" : "unknown");
-      setBookingStatus(b?.status);
-    });
   }
 
-  function fail(err: unknown) {
+  function fail(err: unknown, duringAuth = false) {
     if (err instanceof ApiError) {
-      if (err.status === 409 && mode !== "signin") {
+      // 409 while creating the account means the email exists; 409 from checkout means sold out.
+      if (duringAuth && err.status === 409 && mode !== "signin") {
         setMode("signin");
         setError("That email already has a Lumticket account. Sign in with your password to continue.");
         return;
       }
+      setPayNote("");
+      setCardUrl("");
       setError(err.message);
     } else {
+      setPayNote("");
       setError("Something went wrong. Check your connection and try again.");
     }
   }
@@ -134,11 +166,8 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
     e.preventDefault();
     setError("");
     setNotice("");
-    if (needsDate && !date) {
-      setError("Choose your travel date.");
-      return;
-    }
     setBusy(true);
+    let authed = false;
     try {
       if (mode === "signin") {
         const res = await signIn(email.trim(), password);
@@ -152,9 +181,10 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
       } else {
         await startGuestSession({ email: email.trim(), name: name.trim(), phone: phone.trim() });
       }
+      authed = true;
       await completeBooking(email.trim());
     } catch (err) {
-      fail(err);
+      fail(err, !authed);
     } finally {
       setBusy(false);
     }
@@ -253,6 +283,8 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
 
             {soldOut ? (
               <p className="lum-form-error">This one is sold out.</p>
+            ) : notBuyable ? (
+              <p className="lum-form-error">Online booking for this listing isn&apos;t available yet.</p>
             ) : step === "code" ? (
               <form onSubmit={handleCode} className="lum-form">
                 <p className="lum-form-hint">
@@ -273,9 +305,10 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
                 </label>
                 {error && <p className="lum-form-error" role="alert">{error}</p>}
                 {notice && <p className="lum-form-notice" role="status">{notice}</p>}
+                {payNote && <p className="lum-form-notice" role="status">{payNote}</p>}
                 <button className="lum-button-gold lum-submit" disabled={busy || code.length !== 6}>
                   {busy ? <Loader2 className="lum-spin" size={16} /> : null}
-                  <span>Verify & confirm · {formatMoney(total, item.currency)}</span>
+                  <span>Verify & pay · {formatMoney(total, item.currency)}</span>
                 </button>
                 <button type="button" className="lum-link-button" onClick={handleResend}>
                   Resend code
@@ -310,7 +343,7 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
                 <div className="lum-qty-row">
                   <div>
                     <strong>Tickets</strong>
-                    <small>{formatMoney(item.fromPrice, item.currency)} each</small>
+                    <small>{formatMoney(unitPrice, item.currency)} each</small>
                   </div>
                   <div className="lum-stepper">
                     <button
@@ -333,10 +366,17 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
                   </div>
                 </div>
 
-                {needsDate && (
+                {item.tiers && item.tiers.length > 0 && (
                   <label className="lum-field">
-                    <span>Travel date</span>
-                    <input type="date" required min={today} value={date} onChange={(e) => setDate(e.target.value)} />
+                    <span>Ticket type</span>
+                    <select value={tierIdx} onChange={(e) => setTierIdx(Number(e.target.value))}>
+                      {item.tiers.map((t, i) => (
+                        <option key={t.name} value={i}>
+                          {t.name} — {formatMoney(t.price, t.currency)}
+                          {t.remaining !== undefined ? ` (${t.remaining} left)` : ""}
+                        </option>
+                      ))}
+                    </select>
                   </label>
                 )}
 
@@ -382,12 +422,41 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
                   </label>
                 )}
 
+                <label className="lum-field">
+                  <span>Pay with</span>
+                  <select value={method} onChange={(e) => setMethod(e.target.value as PayMethod)}>
+                    <option value="tnm">TNM Mpamba</option>
+                    <option value="airtel">Airtel Money</option>
+                    <option value="card">Bank card</option>
+                  </select>
+                </label>
+                {method !== "card" && (
+                  <label className="lum-field">
+                    <span>Mobile money number <em>— you&apos;ll get a PIN prompt</em></span>
+                    <input
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      required
+                      value={payPhone}
+                      onChange={(e) => setPayPhone(e.target.value)}
+                      placeholder="0999 000 000"
+                    />
+                  </label>
+                )}
+
                 {error && <p className="lum-form-error" role="alert">{error}</p>}
+                {payNote && <p className="lum-form-notice" role="status">{payNote}</p>}
+                {cardUrl && busy && (
+                  <a className="lum-link-button" href={cardUrl} target="_blank" rel="noopener noreferrer">
+                    Card page didn&apos;t open? Click here
+                  </a>
+                )}
 
                 <button className="lum-button-gold lum-submit" disabled={busy}>
                   {busy ? <Loader2 className="lum-spin" size={16} /> : null}
                   <span>
-                    {busy ? "Processing…" : `Confirm booking · ${formatMoney(total, item.currency)}`}
+                    {busy ? "Processing…" : `Pay ${formatMoney(total, item.currency)}`}
                   </span>
                 </button>
                 <p className="lum-form-fineprint">

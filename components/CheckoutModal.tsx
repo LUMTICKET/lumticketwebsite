@@ -118,10 +118,15 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
     if (result.outcome === "timeout") {
       throw new ApiError(408, `We haven't received payment confirmation yet. If money left your account, quote payment #${started.paymentId} to support.`);
     }
-    const { reference } = result.booking;
+    if (result.outcome !== "issued") {
+      // Unreachable (all other outcomes threw above) — narrows the type for the code below.
+      throw new ApiError(500, "Unexpected payment result. Please contact support.");
+    }
+    const booking = result.booking;
+    const { reference } = booking;
     setPayNote("");
 
-    const when = formatWhen(item.startsAt ?? result.booking.scheduledFor ?? "");
+    const when = formatWhen(item.startsAt ?? booking.scheduledFor ?? "");
     const totalLabel = formatMoney(total, item.currency);
     const emailed = await sendTicketEmail({
       email: customerEmail,
@@ -141,7 +146,7 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
       holder: name.trim() || undefined,
     });
     setVerify("ok"); // the reference comes straight from the API's booking record
-    setBookingStatus(result.booking.status);
+    setBookingStatus(booking.status);
     setStep("success");
   }
 

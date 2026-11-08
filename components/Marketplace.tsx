@@ -65,7 +65,8 @@ export default function Marketplace() {
       ...(events.status === "fulfilled" ? events.value : []),
     ];
     setItems(merged);
-    setFailed(events.status === "rejected" && routes.status === "rejected");
+    if (events.status === "rejected") console.error("Could not load events:", events.reason);
+    setFailed(events.status === "rejected"); // events are the ticket catalog; don't hide their failure behind routes
     setLoading(false);
   }, []);
 

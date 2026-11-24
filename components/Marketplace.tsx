@@ -1,16 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  ArrowRight,
-  Bus,
-  CalendarDays,
-  Compass,
-  MapPin,
-  RefreshCw,
-  Search,
-  Users,
-} from "lucide-react";
+import { ArrowRight, Armchair, Bus, CalendarDays, Compass, MapPin, RefreshCw, Search } from "lucide-react";
 import { fetchEvents, fetchRoutes, formatMoney, type Listing } from "@/lib/api";
 import CheckoutModal from "@/components/CheckoutModal";
 import TicketPreview from "@/components/TicketPreview";
@@ -23,18 +14,6 @@ const STATUS_LABEL: Record<string, string> = {
   "selling-fast": "Selling fast",
   "sold-out": "Sold out",
 };
-
-type TripType = "one-way" | "return";
-
-type SearchForm = {
-  from: string;
-  to: string;
-  date: string;
-  returnDate: string;
-  passengers: number;
-};
-
-const EMPTY_FORM: SearchForm = { from: "", to: "", date: "", returnDate: "", passengers: 1 };
 
 function GroupIcon({ group }: { group: Listing["group"] }) {
   if (group === "Buses") return <Bus size={30} strokeWidth={1.5} />;
@@ -50,11 +29,6 @@ export default function Marketplace() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Listing | null>(null); // ticket preview
   const [checkout, setCheckout] = useState<Listing | null>(null); // payment step
-
-  // Route search (Leaving from / Going to / date / passengers)
-  const [trip, setTrip] = useState<TripType>("one-way");
-  const [form, setForm] = useState<SearchForm>(EMPTY_FORM);
-  const [applied, setApplied] = useState<SearchForm | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -74,39 +48,10 @@ export default function Marketplace() {
     load();
   }, [load]);
 
-  const runSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setTab("Buses"); // a route search only makes sense for buses
-    setSearch("");
-    setApplied({ ...form, returnDate: trip === "return" ? form.returnDate : "" });
-  };
-
-  const clearSearch = () => {
-    setApplied(null);
-    setForm(EMPTY_FORM);
-    setTrip("one-way");
-  };
-
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const from = applied?.from.trim().toLowerCase() ?? "";
-    const to = applied?.to.trim().toLowerCase() ?? "";
-
     return items.filter((i) => {
       if (tab !== "All" && i.group !== tab) return false;
-
-      if (applied) {
-        // If your route listings have dedicated origin/destination fields,
-        // match against those here instead of the combined text.
-        const haystack = [i.title, i.subtitle, i.place, ...i.meta]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        if (from && !haystack.includes(from)) return false;
-        if (to && !haystack.includes(to)) return false;
-        if (applied.date && i.startsAt && i.startsAt.slice(0, 10) !== applied.date) return false;
-      }
-
       return (
         !term ||
         [i.title, i.subtitle, i.operator, i.place, i.group]
@@ -114,7 +59,7 @@ export default function Marketplace() {
           .some((f) => f!.toLowerCase().includes(term))
       );
     });
-  }, [items, tab, search, applied]);
+  }, [items, tab, search]);
 
   return (
     <>
@@ -139,20 +84,11 @@ export default function Marketplace() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search routes, events, cities…"
+            placeholder="Search a city, route or event…"
             aria-label="Search tickets"
           />
         </label>
       </div>
-
-      {applied && (applied.from || applied.to || applied.date) && (
-        <p className="lum-search-summary" role="status">
-          Showing {filtered.length} result{filtered.length === 1 ? "" : "s"}
-          {applied.from && <> from <strong>{applied.from}</strong></>}
-          {applied.to && <> to <strong>{applied.to}</strong></>}
-          {applied.date && <> on <strong>{applied.date}</strong></>}
-        </p>
-      )}
 
       {/* ───────── Results ───────── */}
       {loading ? (
@@ -173,15 +109,14 @@ export default function Marketplace() {
         <p className="lum-empty-state" role="status">
           {items.length === 0
             ? "No tickets are on sale yet. Check back soon."
-            : applied
-              ? "No buses match that route or date. Try different cities or clear the search."
-              : "Nothing matches your search. Try another keyword or category."}
+            : "Nothing matches your search. Try another keyword or category."}
         </p>
       ) : (
         <div className="lum-mkt-grid">
           {filtered.map((item) => {
             const soldOut = item.status === "sold-out";
-            const buyable = !!item.tiers?.length;
+            const isBus = item.routeId !== undefined;
+            const buyable = isBus ? item.fromPrice > 0 : !!item.tiers?.length;
             return (
               <article className="lum-mkt-card" key={item.key}>
                 <div
@@ -228,10 +163,11 @@ export default function Marketplace() {
                     <button
                       className="lum-button-primary-card"
                       disabled={soldOut || !buyable}
-                      onClick={() => setSelected(item)}
+                      onClick={() => (isBus ? setCheckout(item) : setSelected(item))}
                     >
-                      <span>{soldOut ? "Sold out" : buyable ? "Buy now" : "Coming soon"}</span>
-                      {!soldOut && buyable && <ArrowRight size={16} />}
+                      {isBus && buyable && !soldOut && <Armchair size={18} />}
+                      <span>{soldOut ? "Sold out" : buyable ? (isBus ? "Choose seats" : "Buy now") : "Coming soon"}</span>
+                      {!soldOut && buyable && !isBus && <ArrowRight size={18} />}
                     </button>
                   </div>
                 </div>

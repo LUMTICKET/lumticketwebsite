@@ -27,6 +27,8 @@ export interface PaidInfo {
   /** Pre-formatted date/time of travel or event */
   when: string;
   holder?: string;
+  /** Bus tickets: the seat numbers this ticket is for. */
+  seats?: string[];
 }
 
 export type TicketLayout = "wide" | "tall" | "auto";
@@ -156,16 +158,20 @@ export function TicketSVG({
 
   const when = paid?.when ?? (item.startsAt ? new Date(item.startsAt).toLocaleDateString("en-GB", { dateStyle: "medium" }) : "Flexible date");
   const where = item.place ?? item.meta[0] ?? item.group;
-  const admits = paid ? `${paid.quantity} ${paid.quantity > 1 ? "tickets" : "ticket"}` : undefined;
+  const admits = paid
+    ? paid.seats?.length
+      ? paid.seats.join(", ")
+      : `${paid.quantity} ${paid.quantity > 1 ? "tickets" : "ticket"}`
+    : undefined;
   const third = admits
-    ? { label: "Admits", value: admits }
+    ? { label: paid?.seats?.length ? (paid.seats.length > 1 ? "Seats" : "Seat") : "Admits", value: admits }
     : { label: "Operator", value: item.operator ?? item.meta[1] ?? "LumTicket partner" };
   const pill = paid ? "Confirmed" : (STATUS_LABEL[item.status] ?? item.status);
   const sub = [item.subtitle, paid?.holder && `for ${paid.holder}`].filter(Boolean).join(" · ");
   const priceLabel = paid ? "Total paid" : "From";
   const priceValue = paid ? paid.total : formatMoney(item.fromPrice, item.currency);
   const label = paid
-    ? `${item.title} ticket, reference ${paid.reference}, ${paid.quantity} ${paid.quantity > 1 ? "tickets" : "ticket"}`
+    ? `${item.title} ticket, reference ${paid.reference}, ${paid.seats?.length ? `seat ${paid.seats.join(", ")}` : `${paid.quantity} ${paid.quantity > 1 ? "tickets" : "ticket"}`}`
     : `${item.title} ticket, from ${priceValue}`;
 
   const W = tall ? 360 : 900;

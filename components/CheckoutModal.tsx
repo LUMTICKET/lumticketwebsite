@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Mail, Minus, Plus, X } from "lucide-react";
 import PaidTicket, { type VerifyState } from "@/components/PaidTicket";
+import SeatPicker, { type SeatChoice } from "@/components/SeatPicker";
 import {
   ApiError,
   formatMoney,
@@ -13,6 +14,7 @@ import {
   signIn,
   signUp,
   startGuestSession,
+  startBusCheckout,
   startTicketCheckout,
   verifyTwoFactor,
   waitForTicket,
@@ -31,6 +33,8 @@ interface Receipt {
   when: string;
   quantity: number;
   holder?: string;
+  seats?: string[];
+  title?: string;
 }
 
 const MAX_QTY_CAP = 10;
@@ -60,6 +64,10 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
   const [verify, setVerify] = useState<VerifyState>("checking");
   const [bookingStatus, setBookingStatus] = useState<string | undefined>();
   const [tierIdx, setTierIdx] = useState(0);
+  // Bus routes: the departure + seats the customer picked before paying.
+  const isBus = item.routeId !== undefined;
+  const [busChoice, setBusChoice] = useState<SeatChoice | null>(null);
+  const [seatStepError, setSeatStepError] = useState("");
   const [method, setMethod] = useState<PayMethod>("tnm");
   const [payPhone, setPayPhone] = useState("");
   const [payNote, setPayNote] = useState("");
@@ -69,10 +77,12 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
   const dialogRef = useRef<HTMLDivElement>(null);
 
   const tier = item.tiers?.[tierIdx];
-  const unitPrice = tier?.price ?? item.fromPrice;
-  const total = unitPrice * qty;
+  const unitPrice = isBus ? (busChoice?.departure.price ?? item.fromPrice) : (tier?.price ?? item.fromPrice);
+  const qtyEff = isBus ? (busChoice?.seats.length ?? 0) : qty;
+  const total = unitPrice * qtyEff;
   const soldOut = item.status === "sold-out";
-  const notBuyable = !item.tiers?.length;
+  const notBuyable = isBus ? !(item.fromPrice > 0) : !item.tiers?.length;
+  const pickingSeats = isBus && !busChoice;
 
   useEffect(() => {
     let alive = true;
@@ -97,7 +107,7 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
 
 
   async function completeBooking(customerEmail: string) {
-    if (!tier) {
+    if (isBus ? !busChoice : !tier) {
       throw new ApiError(400, "This listing can't be bought online yet. Please try another one.");
     }
     const viaPage = hosted || method === "card"; // finish on PayChangu's secure page
@@ -108,11 +118,10 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
 
     // 1. Start the PayChangu payment. The API prices the order itself from the ticket type.
     setPayNote(viaPage ? "Opening PayChangu's secure payment page…" : "Check your phone and approve the payment prompt…");
-    const started = await startTicketCheckout({
-      ticketTypeId: tier.id,
-      quantity: qty,
-      ...(viaPage ? {} : { method, phone: phoneDigits }),
-    });
+    const payment = viaPage ? {} : { method, phone: phoneDigits };
+    const started = busChoice
+      ? await startBusCheckout({ scheduleId: busChoice.departure.id, seats: busChoice.seats, ...payment })
+      : await startTicketCheckout({ ticketTypeId: tier!.id, quantity: qty, ...payment });
     if (started.checkoutUrl) {
       // A popup opened after an await can be blocked, so the link is also shown below.
       setCardUrl(started.checkoutUrl);
@@ -128,7 +137,7 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
       throw new ApiError(402, "The payment was declined or cancelled, so no ticket was issued.");
     }
     if (result.outcome === "sold-out") {
-      throw new ApiError(409, `The last tickets sold out as you paid. Your payment (#${started.paymentId}) has been flagged for a refund.`);
+      throw new ApiError(409, `${isBus ? "Your seats were taken" : "The last tickets sold out"} as you paid. Your payment (#${started.paymentId}) has been flagged for a refund.`);
     }
     if (result.outcome === "timeout") {
       throw new ApiError(408, `We haven't received payment confirmation yet. If money left your account, quote payment #${started.paymentId} to support.`);
@@ -141,14 +150,15 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
     const { reference } = booking;
     setPayNote("");
 
-    const when = formatWhen(item.startsAt ?? booking.scheduledFor ?? "");
+    const when = formatWhen(busChoice?.departure.departureAt ?? item.startsAt ?? booking.scheduledFor ?? "");
     const totalLabel = formatMoney(total, item.currency);
+    const seatLabel = busChoice ? `Seat ${busChoice.seats.join(", ")}` : undefined;
     const emailed = await sendTicketEmail({
       email: customerEmail,
       reference,
-      title: `${item.title} — ${tier.name}`,
+      title: seatLabel ? `${item.title} — ${seatLabel}` : `${item.title} — ${tier!.name}`,
       when,
-      quantity: qty,
+      quantity: qtyEff,
       total: totalLabel,
     });
     setReceipt({
@@ -157,8 +167,9 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
       email: customerEmail,
       total: totalLabel,
       when,
-      quantity: qty,
+      quantity: qtyEff,
       holder: name.trim() || undefined,
+      seats: busChoice?.seats,
     });
     setVerify("ok"); // the reference comes straight from the API's booking record
     setBookingStatus(booking.status);
@@ -175,6 +186,16 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
       }
       setPayNote("");
       setCardUrl("");
+      if (isBus && err.status === 409) {
+        // Someone else got the seat first: back to the seat map, which reloads what is free.
+        setBusChoice(null);
+        setStep("form");
+        setChallenge(null);
+        setCode("");
+        setSeatStepError(err.message);
+        setError("");
+        return;
+      }
       setError(err.message);
     } else {
       setPayNote("");
@@ -258,7 +279,7 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
   return (
     <div className="lum-modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div
-        className={`lum-modal${step === "success" ? " lum-modal-wide" : ""}`}
+        className={`lum-modal${step === "success" || (pickingSeats && step === "form") ? " lum-modal-wide" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-label={`Buy ${item.title}`}
@@ -279,6 +300,7 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
                 total: receipt.total,
                 when: receipt.when,
                 holder: receipt.holder,
+                seats: receipt.seats,
               }}
               email={receipt.email}
               emailed={receipt.emailed}
@@ -309,6 +331,15 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
               <p className="lum-form-error">This one is sold out.</p>
             ) : notBuyable ? (
               <p className="lum-form-error">Online booking for this listing isn&apos;t available yet.</p>
+            ) : pickingSeats && step === "form" ? (
+              <SeatPicker
+                routeId={item.routeId!}
+                error={seatStepError}
+                onConfirm={(choice) => {
+                  setSeatStepError("");
+                  setBusChoice(choice);
+                }}
+              />
             ) : step === "code" ? (
               <form onSubmit={handleCode} className="lum-form">
                 <p className="lum-form-hint">
@@ -364,6 +395,22 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
                   ))}
                 </div>
 
+                {busChoice ? (
+                  <div className="lum-seat-chosen">
+                    <div>
+                      <small>
+                        {new Date(busChoice.departure.departureAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
+                      </small>
+                      <strong>
+                        Seat{busChoice.seats.length > 1 ? "s" : ""} {busChoice.seats.join(", ")}
+                      </strong>
+                      <small>{formatMoney(unitPrice, item.currency)} per seat</small>
+                    </div>
+                    <button type="button" className="lum-link-button" onClick={() => setBusChoice(null)}>
+                      Change seats
+                    </button>
+                  </div>
+                ) : (
                 <div className="lum-qty-row">
                   <div>
                     <strong>Tickets</strong>
@@ -389,8 +436,9 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
                     </button>
                   </div>
                 </div>
+                )}
 
-                {item.tiers && item.tiers.length > 0 && (
+                {!isBus && item.tiers && item.tiers.length > 0 && (
                   <label className="lum-field">
                     <span>Ticket type</span>
                     <select value={tierIdx} onChange={(e) => setTierIdx(Number(e.target.value))}>

@@ -2237,3 +2237,149 @@ input {
   border-radius: 12px;
   object-fit: cover;
 }
+
+/* ═════════ Bigger, easier-to-read marketplace + bus seat selection ═════════ */
+
+/* Section heading */
+.lum-section-heading h1,
+.lum-section-heading h2 { font-size: clamp(40px, 5vw, 64px); line-height: 1.05; }
+.lum-section-heading p { font-size: clamp(17px, 1.6vw, 20px); line-height: 1.5; max-width: 40ch; }
+.lum-section-heading .lum-button-outline { font-size: 16px; padding: 14px 22px; }
+
+/* Filters */
+.lum-discovery-tools { margin: 44px 0 32px; gap: 20px; flex-wrap: wrap; }
+.lum-category-tabs { gap: 10px; }
+.lum-category-tabs button { padding: 13px 24px; font-size: 17px; font-weight: 650; }
+.lum-experience-search { min-width: min(340px, 100%); padding: 14px 18px; border-radius: 12px; gap: 12px; }
+.lum-experience-search input { font-size: 17px; }
+
+/* Cards */
+.lum-mkt-grid { gap: 28px; }
+.lum-mkt-card { border-radius: 18px; }
+.lum-mkt-visual { height: 160px; }
+.lum-mkt-visual svg { width: 44px; height: 44px; }
+.lum-mkt-visual.has-poster { height: 280px; }
+.lum-status { top: 14px; right: 14px; padding: 7px 13px; font-size: 14px; }
+.lum-mkt-body { padding: 24px 24px 22px; }
+.lum-mkt-body h3 { margin: 10px 0 6px; font-size: 28px; line-height: 1.15; }
+.lum-mkt-sub { font-size: 17px; }
+.lum-mkt-meta { gap: 8px 18px; margin: 18px 0 22px; font-size: 16px; }
+.lum-mkt-foot { padding-top: 20px; }
+.lum-mkt-price { font-size: 26px; font-weight: 800; }
+.lum-mkt-price small { font-size: 14px; }
+.lum-button-primary-card { min-height: 54px; padding: 0 24px; gap: 10px; border-radius: 12px; font-size: 18px; font-weight: 700; }
+.lum-card-category { font-size: 13px; letter-spacing: 0.08em; }
+.lum-empty-state { font-size: 19px; }
+
+/* Modal + checkout form */
+.lum-modal { width: min(560px, 100%); padding: 34px; border-radius: 20px; }
+.lum-modal-wide { width: min(780px, 100%); }
+.lum-modal-close { width: 42px; height: 42px; }
+.lum-modal-head { margin-bottom: 24px; padding-right: 50px; }
+.lum-modal-head h3 { font-size: 32px; }
+.lum-modal-head p { font-size: 16px; }
+.lum-form { gap: 18px; }
+.lum-mode-tabs button { padding: 13px 8px; font-size: 15px; }
+.lum-qty-row strong { font-size: 18px; }
+.lum-qty-row small { font-size: 14px; }
+.lum-stepper button { width: 48px; height: 48px; }
+.lum-stepper span { min-width: 30px; font-size: 18px; }
+.lum-field { gap: 8px; }
+.lum-field > span { font-size: 15px; }
+.lum-field input,
+.lum-field select {
+  min-height: 54px;
+  padding: 0 14px;
+  border: 1px solid var(--lum-border);
+  border-radius: 10px;
+  color: var(--lum-navy);
+  background: white;
+  font-size: 18px;
+}
+.lum-field select:focus { border-color: var(--lum-navy); outline: 2px solid rgba(204, 159, 47, 0.45); }
+.lum-submit { min-height: 60px; border-radius: 12px; font-size: 19px; font-weight: 750; }
+.lum-form-error, .lum-form-notice { padding: 14px 16px; font-size: 16px; border-radius: 10px; }
+.lum-form-hint { font-size: 16px; line-height: 1.5; }
+.lum-form-fineprint { font-size: 14px; }
+.lum-link-button { font-size: 15px; }
+
+/* Bus: departure + seat picker */
+.lum-seatpicker { display: flex; flex-direction: column; gap: 18px; }
+.lum-step-title { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 22px; letter-spacing: -0.02em; }
+.lum-step-title span {
+  display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%;
+  color: var(--lum-navy); background: var(--lum-gold); font-size: 17px; font-weight: 800;
+}
+.lum-empty-inline { display: flex; align-items: center; gap: 10px; margin: 0; padding: 22px; border-radius: 12px; color: #5d6a7d; background: rgba(4, 32, 69, 0.05); font-size: 17px; }
+.lum-departures { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.lum-departures button {
+  display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 18px 20px; border: 2px solid var(--lum-border); border-radius: 14px;
+  color: var(--lum-navy); background: white; cursor: pointer; text-align: left;
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+.lum-departures button:hover:not(:disabled) { border-color: var(--lum-navy); transform: translateY(-2px); }
+.lum-departures button:disabled { opacity: 0.45; cursor: not-allowed; }
+.lum-dep-when { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; font-size: 19px; font-weight: 700; }
+.lum-dep-when svg { color: var(--lum-gold); }
+.lum-dep-when svg + * { margin-left: 0; }
+.lum-dep-meta { display: flex; flex-direction: column; align-items: flex-end; margin-left: auto; }
+.lum-dep-meta strong { font-size: 22px; }
+.lum-dep-meta small { color: #5d6a7d; font-size: 15px; }
+.lum-dep-meta small.is-low { color: #a3321f; font-weight: 700; }
+
+.lum-seat-trip { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 0; font-size: 18px; }
+.lum-seat-legend { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0; padding: 0; list-style: none; font-size: 16px; color: #5d6a7d; }
+.lum-seat-legend li { display: inline-flex; align-items: center; gap: 8px; }
+.lum-seat-dot { display: inline-block; width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--lum-navy); }
+.lum-seat-dot.is-free { background: white; }
+.lum-seat-dot.is-picked { border-color: var(--lum-gold); background: var(--lum-gold); }
+.lum-seat-dot.is-taken { border-color: #c7ccd4; background: #d9dde3; }
+
+.lum-bus-map {
+  width: min(380px, 100%); margin: 0 auto; padding: 18px 22px 26px;
+  border: 3px solid var(--lum-navy); border-radius: 34px 34px 18px 18px; background: white;
+}
+.lum-bus-front {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-bottom: 18px; padding-bottom: 14px; border-bottom: 2px dashed var(--lum-border);
+  color: #5d6a7d; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+}
+.lum-wheel { width: 34px; height: 34px; border: 4px solid var(--lum-navy); border-radius: 50%; position: relative; }
+.lum-wheel::after { content: ""; position: absolute; inset: 7px; border-radius: 50%; background: var(--lum-navy); }
+.lum-seat-grid { display: grid; grid-template-columns: 1fr 1fr 34px 1fr 1fr; gap: 12px 10px; }
+.lum-seat:nth-child(4n + 3) { grid-column: 4; }
+.lum-seat {
+  min-height: 56px; border: 2px solid var(--lum-navy); border-radius: 10px 10px 6px 6px;
+  color: var(--lum-navy); background: white; cursor: pointer; font-size: 19px; font-weight: 800;
+  transition: transform 120ms ease, background 120ms ease;
+}
+.lum-seat:hover:not(:disabled) { transform: translateY(-2px); background: rgba(204, 159, 47, 0.18); }
+.lum-seat.is-picked { border-color: var(--lum-gold); background: var(--lum-gold); }
+.lum-seat.is-taken { border-color: #c7ccd4; color: #9aa3b0; background: #d9dde3; cursor: not-allowed; text-decoration: line-through; }
+.lum-seat:focus-visible { outline: 3px solid rgba(204, 159, 47, 0.7); outline-offset: 2px; }
+
+.lum-seat-summary {
+  position: sticky; bottom: -34px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  margin: 4px -34px -34px; padding: 18px 34px; border-top: 1px solid var(--lum-border);
+  border-radius: 0 0 20px 20px; background: var(--lum-cream);
+}
+.lum-seat-summary small { display: block; color: #5d6a7d; font-size: 16px; }
+.lum-seat-summary strong { font-size: 28px; letter-spacing: -0.03em; }
+.lum-seat-continue { display: inline-flex; align-items: center; gap: 10px; min-height: 58px; padding: 0 28px; border: 0; border-radius: 12px; cursor: pointer; font-size: 19px; font-weight: 750; }
+.lum-seat-continue:disabled { opacity: 0.4; cursor: not-allowed; }
+.lum-seat-chosen {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 16px 18px; border: 2px solid var(--lum-gold); border-radius: 14px; background: rgba(204, 159, 47, 0.1);
+}
+.lum-seat-chosen small { display: block; color: #5d6a7d; font-size: 15px; }
+.lum-seat-chosen strong { display: block; margin: 2px 0; font-size: 22px; }
+
+@media (max-width: 640px) {
+  .lum-modal { padding: 24px 18px; }
+  .lum-seat-summary { bottom: -24px; margin: 4px -18px -24px; padding: 14px 18px; }
+  .lum-seat-summary strong { font-size: 22px; }
+  .lum-seat-continue { padding: 0 20px; }
+  .lum-mkt-body h3 { font-size: 25px; }
+  .lum-departures button { flex-wrap: wrap; }
+}

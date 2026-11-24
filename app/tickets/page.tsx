@@ -16,7 +16,7 @@ export default function TicketsPage() {
             <h1>
               Latest <span>tickets</span>
             </h1>
-            <p>Browse current events and bus routes, then book securely online.</p>
+            <p>Browse events and bus routes. For buses, you pick your own seat before you pay.</p>
           </div>
         </div>
 

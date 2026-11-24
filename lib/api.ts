@@ -84,6 +84,8 @@ export interface Listing {
   status: string;
   meta: string[]; // small facts shown on the card (duration, rating, departures...)
   eventId?: number;
+  /** bus_routes.id — set on bus routes; buying one means picking a departure and seats. */
+  routeId?: number;
   /** Poster / flyer uploaded by the business owner (absolute URL, or undefined). */
   image?: string;
   /** Ticket tiers from the catalog (General / VIP ...). Only listings with tiers can be bought online. */
@@ -178,6 +180,7 @@ function normalizeRoute(r: Raw): Listing {
   const rating = num(r.rating);
   if (rating) meta.push(`★ ${rating.toFixed(1)}`);
   return {
+    routeId: num(r.id),
     key: `route-${r.id ?? `${origin}-${destination}-${operator}`}`,
     kind: "bus",
     group: "Buses",
@@ -201,6 +204,52 @@ export async function fetchEvents(): Promise<Listing[]> {
 export async function fetchRoutes(): Promise<Listing[]> {
   const data = await request<unknown>("/api/catalog/routes");
   return toArray(data, "routes").map(normalizeRoute);
+}
+
+/* ------------------------------ bus departures ------------------------------ */
+
+export interface Departure {
+  id: number; // schedules.id
+  departureAt: string;
+  seatsTotal: number;
+  seatsLeft: number;
+  price: number; // per seat
+  currency: string;
+  duration?: string;
+}
+
+export interface SeatMap {
+  seatsTotal: number;
+  taken: string[]; // seat numbers that are sold or being paid for
+  seatsFree: number;
+  maxPerOrder: number;
+}
+
+/** Upcoming departures for a bus route (GET /api/catalog/schedules). */
+export async function fetchDepartures(routeId: number): Promise<Departure[]> {
+  const data = await request<unknown>(`/api/catalog/schedules?routeId=${routeId}`);
+  return toArray(data, "schedules")
+    .map((r) => ({
+      id: num(r.id) ?? 0,
+      departureAt: str(r.departureAt) ?? "",
+      seatsTotal: num(r.seatsTotal) ?? 0,
+      seatsLeft: num(r.seatsLeft) ?? 0,
+      price: num(r.price) ?? 0,
+      currency: str(r.currency) ?? "MWK",
+      duration: str(r.duration),
+    }))
+    .filter((d) => d.id > 0 && d.departureAt && d.price > 0);
+}
+
+/** Live seat map of one departure (GET /api/catalog/schedules/:id/seats). */
+export async function fetchSeatMap(scheduleId: number): Promise<SeatMap> {
+  const d = await request<Raw>(`/api/catalog/schedules/${scheduleId}/seats`);
+  return {
+    seatsTotal: num(d.seatsTotal) ?? 0,
+    taken: Array.isArray(d.taken) ? (d.taken as unknown[]).map(String) : [],
+    seatsFree: num(d.seatsFree) ?? 0,
+    maxPerOrder: num(d.maxPerOrder) ?? 1,
+  };
 }
 
 /* ----------------------------------- auth ----------------------------------- */
@@ -350,6 +399,7 @@ export interface TicketBooking {
   amount?: number;
   quantity?: number;
   status?: string;
+  detail?: string; // e.g. "Seat 3, 4 · Operator"
 }
 
 export interface CheckoutStart {
@@ -392,6 +442,24 @@ export async function startTicketCheckout(input: {
 }
 
 /**
+ * POST /api/checkout/bus. The server prices the order (fare x seats), re-checks that every chosen seat
+ * is still free and holds them for a few minutes while the buyer pays.
+ */
+export async function startBusCheckout(input: {
+  scheduleId: number;
+  seats: string[];
+  method?: PayMethod;
+  phone?: string;
+}): Promise<CheckoutStart> {
+  const session = getSession();
+  if (!session) throw new ApiError(401, "Please sign in to continue.");
+  const data = await request<Raw>("/api/checkout/bus", { method: "POST", token: session.token, body: input });
+  const paymentId = num(data.paymentId);
+  if (paymentId === undefined) throw new ApiError(502, "Payment started but no payment id was returned.");
+  return { paymentId, checkoutUrl: str(data.checkoutUrl) };
+}
+
+/**
  * Polls GET /api/checkout/tickets/:paymentId until the API has verified the payment with PayChangu and
  * issued the booking, or the payment fails / we time out.
  */
@@ -423,6 +491,7 @@ export async function waitForTicket(
               amount: num(b.amount),
               quantity: num(b.quantity),
               status: str(b.status),
+              detail: str(b.detail),
             },
           };
         }

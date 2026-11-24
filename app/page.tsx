@@ -92,7 +92,7 @@ export default function HomePage() {
             <h2>
               Find your <span>ticket</span>
             </h2>
-            <p>Pick an event or bus trip and check out as a guest or with your account.</p>
+            <p>Pick an event, or choose your seat on a bus, and pay as a guest or with your account.</p>
           </div>
           <a href="https://business.lumticket.com" className="lum-button-outline">
             Start a Business <ArrowUpRight size={16} />

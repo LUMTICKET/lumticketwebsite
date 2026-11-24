@@ -278,9 +278,14 @@ export default function Marketplace() {
                 <div
                   className={`lum-mkt-visual is-${
                     item.group === "Buses" ? "bus" : item.group === "Events" ? "event" : "travel"
-                  }`}
+                  }${item.image ? " has-poster" : ""}`}
                 >
-                  <GroupIcon group={item.group} />
+                  {item.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img className="lum-mkt-poster" src={item.image} alt={`${item.title} poster`} loading="lazy" />
+                  ) : (
+                    <GroupIcon group={item.group} />
+                  )}
                   <span className={`lum-status is-${item.status}`}>
                     {STATUS_LABEL[item.status] ?? item.status}
                   </span>

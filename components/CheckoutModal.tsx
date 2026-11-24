@@ -291,6 +291,10 @@ export default function CheckoutModal({ item, onClose }: { item: Listing; onClos
           </>
         ) : (
           <>
+            {item.image && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="lum-checkout-poster" src={item.image} alt={`${item.title} poster`} />
+            )}
             <header className="lum-modal-head">
               <span className="lum-card-category">{item.group}</span>
               <h3>{item.title}</h3>

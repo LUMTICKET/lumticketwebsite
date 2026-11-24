@@ -53,6 +53,11 @@ export default function TicketPreview({
           <p>Review the details, then tap the ticket to pay.</p>
         </div>
 
+        {item.image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="lum-preview-poster" src={item.image} alt={`${item.title} poster`} />
+        )}
+
         <button type="button" className="lum-ticket-button" onClick={onContinue} aria-label="Continue to payment">
           <TicketSVG item={item} />
           <span className="lum-ticket-hint">

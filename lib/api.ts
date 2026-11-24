@@ -84,6 +84,8 @@ export interface Listing {
   status: string;
   meta: string[]; // small facts shown on the card (duration, rating, departures...)
   eventId?: number;
+  /** Poster / flyer uploaded by the business owner (absolute URL, or undefined). */
+  image?: string;
   /** Ticket tiers from the catalog (General / VIP ...). Only listings with tiers can be bought online. */
   tiers?: Tier[];
   maxPerUser?: number;
@@ -118,6 +120,14 @@ function toArray(data: unknown, ...keys: string[]): Raw[] {
   return [];
 }
 
+/** The API returns posters as `/api/events/:id/poster?v=…`; go through the same-origin proxy. */
+function posterUrl(v: unknown): string | undefined {
+  const url = str(v);
+  if (!url) return undefined;
+  if (url.startsWith("/")) return `${API_BASE}${url}`;
+  return /^https:\/\//i.test(url) ? url : undefined;
+}
+
 function normalizeEvent(e: Raw): Listing {
   const category = (str(e.category) ?? "event").toLowerCase();
   const isBus = category === "bus";
@@ -138,6 +148,7 @@ function normalizeEvent(e: Raw): Listing {
     .filter((t) => t.id > 0 && t.price > 0 && (t.remaining === undefined || t.remaining > 0));
   return {
     eventId: num(e.id),
+    image: posterUrl(e.image),
     maxPerUser: num(e.maxPerUser),
     tiers: tiers.length ? tiers : undefined,
     key: `event-${e.id}`,
